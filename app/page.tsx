@@ -4,20 +4,33 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bot as BotIcon } from 'lucide-react';
 import Chat from '../components/Chat';
+import { ApiConfig } from '../types/api-config';
 
-const models = ['gpt-4', 'gpt-3.5-turbo'];
-const clusters = ['cluster1', 'cluster2'];
+const clusters = ['minikube', 'ems-uat-2'];
 
 export default function Home() {
   const router = useRouter();
-  const [selectedModel, setSelectedModel] = useState(models[0]);
   const [selectedCluster, setSelectedCluster] = useState(clusters[0]);
+  const [configs, setConfigs] = useState<ApiConfig[]>([]);
+  const [selectedConfig, setSelectedConfig] = useState<ApiConfig | null>(null);
 
   useEffect(() => {
     // 检查用户是否已登录
     const token = localStorage.getItem('jwt');
     if (!token) {
       router.push('/login');
+      return;
+    }
+
+    // 加载 API 配置
+    const savedConfigs = localStorage.getItem('api_configs');
+    if (savedConfigs) {
+      const parsedConfigs = JSON.parse(savedConfigs);
+      setConfigs(parsedConfigs);
+      // 选择第一个配置作为默认配置
+      if (parsedConfigs.length > 0) {
+        setSelectedConfig(parsedConfigs[0]);
+      }
     }
   }, [router]);
 
@@ -54,17 +67,9 @@ export default function Home() {
           <div className="bg-gray-800 bg-opacity-90 rounded-lg shadow-lg p-6">
             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
               <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full sm:w-32 p-2 bg-white text-gray-900 rounded-lg border border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {models.map((model) => (
-                    <option key={model} value={model}>
-                      {model}
-                    </option>
-                  ))}
-                </select>
+                <div className="text-white text-sm">
+                  集群选择：
+                </div>
                 
                 <select
                   value={selectedCluster}
@@ -80,7 +85,13 @@ export default function Home() {
               </div>
             </div>
 
-            <Chat model={selectedModel} cluster={selectedCluster} />
+            {selectedConfig ? (
+              <Chat cluster={selectedCluster} model={selectedConfig.selectedModels[0]} />
+            ) : (
+              <div className="text-center text-gray-400 py-8">
+                请先在设置页面配置 API
+              </div>
+            )}
           </div>
         </div>
       </main>
