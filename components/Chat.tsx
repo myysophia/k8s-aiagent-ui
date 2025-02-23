@@ -521,9 +521,9 @@ const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
   );
 
   return (
-    <div className="flex h-screen bg-gray-900">
+    <div className="flex h-full bg-gray-900">
       {/* 左侧边栏 */}
-      <div className={`${showSidebar ? 'w-64' : 'w-0'} flex-shrink-0 bg-gray-800 transition-all duration-300 overflow-hidden`}>
+      <div className={`${showSidebar ? 'w-80' : 'w-0'} flex-shrink-0 bg-gray-800 transition-all duration-300 overflow-hidden`}>
         <div className="flex flex-col h-full p-2">
           <button
             onClick={createNewSession}
@@ -555,9 +555,9 @@ const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
       </div>
 
       {/* 主聊天区域 */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col h-full">
         {/* 顶部导航栏 */}
-        <div className="h-14 border-b border-gray-700 flex items-center px-4">
+        <div className="h-14 border-b border-gray-700 flex items-center px-6">
           <button
             onClick={() => setShowSidebar(!showSidebar)}
             className="p-2 text-gray-400 hover:text-white transition-colors"
@@ -582,119 +582,125 @@ const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
 
         {/* 消息区域 */}
         <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-y-auto space-y-4 p-4">
-            {messages.map((message) => (
-              <div
-                key={message.timestamp}
-                className={`flex items-start space-x-3 opacity-0 animate-fade-in ${
-                  message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
-                }`}
-              >
-                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                  message.role === 'user' ? 'bg-gray-600' : 'bg-blue-500'
-                }`}>
-                  {message.role === 'user' ? (
-                    <User className="w-5 h-5 text-white" />
-                  ) : (
-                    <Bot className="w-5 h-5 text-white" />
-                  )}
-                </div>
-                
-                <div className={`flex flex-col space-y-1 max-w-[75%] ${
-                  message.role === 'user' ? 'items-end' : 'items-start'
-                }`}>
-                  <div className="flex items-center space-x-2">
-                    {message.type === 'command' && (
-                      <Terminal className="w-4 h-4 text-gray-400" />
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="max-w-5xl mx-auto space-y-6">
+              {messages.map((message) => (
+                <div
+                  key={message.timestamp}
+                  className={`flex items-start space-x-3 opacity-0 animate-fade-in ${
+                    message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+                  }`}
+                >
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                    message.role === 'user' ? 'bg-gray-600' : 'bg-blue-500'
+                  }`}>
+                    {message.role === 'user' ? (
+                      <User className="w-5 h-5 text-white" />
+                    ) : (
+                      <Bot className="w-5 h-5 text-white" />
                     )}
-                    {message.type === 'chat' && (
-                      <MessageSquare className="w-4 h-4 text-gray-400" />
-                    )}
-                    <span className="text-gray-400 text-xs">
-                      {formatTimestamp(message.timestamp)}
-                    </span>
                   </div>
-                  <div
-                    className={`relative group rounded-lg p-4 shadow-sm ${
-                      message.role === 'user'
-                        ? 'bg-gray-700 text-white'
-                        : 'bg-blue-100 text-gray-800'
-                    }`}
-                  >
-                    <ReactMarkdown>{message.content}</ReactMarkdown>
-                    <button
-                      onClick={() => copyToClipboard(message.content, message.timestamp)}
-                      className="absolute top-2 right-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-200"
-                      title="复制内容"
-                    >
-                      {copiedMessageId === message.timestamp ? (
-                        <Check className="w-4 h-4 text-green-500" />
-                      ) : (
-                        <Copy className="w-4 h-4 text-gray-500" />
+                  
+                  <div className={`flex flex-col space-y-1 max-w-[75%] ${
+                    message.role === 'user' ? 'items-end' : 'items-start'
+                  }`}>
+                    <div className="flex items-center space-x-2">
+                      {message.type === 'command' && (
+                        <Terminal className="w-4 h-4 text-gray-400" />
                       )}
-                    </button>
+                      {message.type === 'chat' && (
+                        <MessageSquare className="w-4 h-4 text-gray-400" />
+                      )}
+                      <span className="text-gray-400 text-xs">
+                        {formatTimestamp(message.timestamp)}
+                      </span>
+                    </div>
+                    <div
+                      className={`relative group rounded-lg p-4 shadow-sm ${
+                        message.role === 'user'
+                          ? 'bg-gray-700 text-white'
+                          : 'bg-blue-100 text-gray-800'
+                      }`}
+                    >
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                      <button
+                        onClick={() => copyToClipboard(message.content, message.timestamp)}
+                        className="absolute top-2 right-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-200"
+                        title="复制内容"
+                      >
+                        {copiedMessageId === message.timestamp ? (
+                          <Check className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <Copy className="w-4 h-4 text-gray-500" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-            
-            {isLoading && (
-              <div className="flex items-center justify-center space-x-2 text-gray-400">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="animate-pulse">正在处理...</span>
-              </div>
-            )}
+              ))}
+              <div ref={messagesEndRef} />
+              
+              {isLoading && (
+                <div className="flex items-center justify-center space-x-2 text-gray-400 py-4">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="animate-pulse">正在处理...</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {error && (
-            <div className="mx-4 mb-4 p-3 bg-red-500 text-white rounded-lg animate-fade-in">
-              {error}
+            <div className="mx-auto max-w-5xl px-6 mb-4">
+              <div className="p-3 bg-red-500 text-white rounded-lg animate-fade-in">
+                {error}
+              </div>
             </div>
           )}
           
-          <div className="border-t border-gray-700 p-4">
-            <form onSubmit={handleSubmit} className="relative flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-              <div className="relative flex-1">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  placeholder="输入消息，按回车发送（Shift + 回车换行）"
-                  className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          <div className="border-t border-gray-700 p-6">
+            <div className="max-w-5xl mx-auto">
+              <form onSubmit={handleSubmit} className="relative flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                <div className="relative flex-1">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={input}
+                    onChange={handleInputChange}
+                    onKeyDown={handleKeyDown}
+                    placeholder="输入消息，按回车发送（Shift + 回车换行）"
+                    className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    disabled={isLoading}
+                  />
+                  <CommandSuggestions
+                    isVisible={showCommands}
+                    filter={input}
+                    onSelect={(command) => {
+                      setInput('/' + command.name + ' ');
+                      setShowCommands(false);
+                      inputRef.current?.focus();
+                    }}
+                    selectedIndex={selectedCommandIndex}
+                  />
+                </div>
+                <button
+                  type="submit"
                   disabled={isLoading}
-                />
-                <CommandSuggestions
-                  isVisible={showCommands}
-                  filter={input}
-                  onSelect={(command) => {
-                    setInput('/' + command.name + ' ');
-                    setShowCommands(false);
-                    inputRef.current?.focus();
-                  }}
-                  selectedIndex={selectedCommandIndex}
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="flex items-center justify-center px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    发送中
-                  </>
-                ) : (
-                  <>
-                    发送
-                    <Send className="w-4 h-4 ml-2" />
-                  </>
-                )}
-              </button>
-            </form>
+                  className="flex items-center justify-center px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      发送中
+                    </>
+                  ) : (
+                    <>
+                      发送
+                      <Send className="w-4 h-4 ml-2" />
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       </div>

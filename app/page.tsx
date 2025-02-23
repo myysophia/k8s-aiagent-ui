@@ -62,10 +62,10 @@ export default function Home() {
       </nav>
 
       {/* 主要内容区域 */}
-      <main className="pt-20 px-4 min-h-screen">
-        <div className="max-w-3xl mx-auto">
-          <div className="bg-gray-800 bg-opacity-90 rounded-lg shadow-lg p-6">
-            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
+      <main className="pt-[60px] h-screen">
+        <div className="h-full">
+          <div className="h-full bg-gray-800 bg-opacity-90">
+            <div className="flex flex-col sm:flex-row justify-between items-center px-6 py-4 border-b border-gray-700">
               <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
                 <div className="text-white text-sm">
                   集群选择：
