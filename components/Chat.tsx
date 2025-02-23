@@ -40,7 +40,7 @@ interface ChatProps {
   cluster: string;
 }
 
-const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
+const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -49,6 +49,7 @@ const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [currentConfig, setCurrentConfig] = useState<ApiConfig | null>(null);
+  const [currentModel, setCurrentModel] = useState(initialModel);
   const [sessionsState, setSessionsState] = useState<ChatSessionsState>(DEFAULT_SESSIONS_STATE);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -56,6 +57,7 @@ const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
   const [isEditingSession, setIsEditingSession] = useState<string | null>(null);
   const [editSessionName, setEditSessionName] = useState('');
   const [showSidebar, setShowSidebar] = useState(true);
+  const [configs, setConfigs] = useState<ApiConfig[]>([]);
 
   useEffect(() => {
     // 从 localStorage 加载历史消息
@@ -85,9 +87,35 @@ const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
     const loadConfig = () => {
       const savedConfigs = localStorage.getItem('api_configs');
       if (savedConfigs) {
-        const configs = JSON.parse(savedConfigs) as ApiConfig[];
-        setCurrentConfig(configs.length > 0 ? configs[0] : null);
+        const parsedConfigs = JSON.parse(savedConfigs) as ApiConfig[];
+        setConfigs(parsedConfigs);
+        
+        if (parsedConfigs.length > 0) {
+          // 获取当前选中的配置ID
+          const currentConfigId = localStorage.getItem('current_config_id');
+          let configToUse: ApiConfig | null = null;
+          
+          if (currentConfigId) {
+            configToUse = parsedConfigs.find(c => c.id === currentConfigId) || null;
+          }
+          
+          // 如果没有当前配置，使用第一个配置
+          if (!configToUse) {
+            configToUse = parsedConfigs[0];
+            localStorage.setItem('current_config_id', configToUse.id);
+          }
+          
+          setCurrentConfig(configToUse);
+          
+          // 设置当前模型
+          if (configToUse && configToUse.selectedModels.length > 0) {
+            setCurrentModel(configToUse.selectedModels[0]);
+          }
+        } else {
+          setCurrentConfig(null);
+        }
       } else {
+        setConfigs([]);
         setCurrentConfig(null);
       }
     };
@@ -97,7 +125,7 @@ const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
 
     // 监听 storage 变化
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'api_configs') {
+      if (e.key === 'api_configs' || e.key === 'current_config_id') {
         loadConfig();
       }
     };
@@ -150,7 +178,7 @@ const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
       messages: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      model,
+      model: currentModel,
       cluster,
     };
 
@@ -346,7 +374,7 @@ const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
     setShowCommands(false);
 
     try {
-      const response = await sendMessage(processedInput, model, cluster);
+      const response = await sendMessage(processedInput, currentModel, cluster);
       const assistantMessage: ChatMessage = {
         role: 'assistant',
         content: response.message,
@@ -534,6 +562,25 @@ const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
     return message.content;
   };
 
+  // 切换 API 配置
+  const handleConfigChange = (configId: string) => {
+    const newConfig = configs.find(c => c.id === configId);
+    if (newConfig) {
+      setCurrentConfig(newConfig);
+      // 保存当前选中的配置ID
+      localStorage.setItem('current_config_id', configId);
+      // 当切换配置时，自动选择第一个可用的模型
+      if (newConfig.selectedModels.length > 0) {
+        setCurrentModel(newConfig.selectedModels[0]);
+      }
+    }
+  };
+
+  // 切换模型
+  const handleModelChange = (modelName: string) => {
+    setCurrentModel(modelName);
+  };
+
   return (
     <div className="flex h-full bg-gray-900">
       {/* 左侧边栏 */}
@@ -580,12 +627,37 @@ const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          {currentConfig && (
-            <div className="ml-4 flex items-center space-x-2">
-              <span className="text-sm text-white">{currentConfig.name}</span>
-              <span className="text-xs text-gray-400">({currentConfig.provider})</span>
-            </div>
-          )}
+
+          <div className="ml-4 flex items-center space-x-4">
+            {/* API 配置选择器 */}
+            <select
+              value={currentConfig?.id}
+              onChange={(e) => handleConfigChange(e.target.value)}
+              className="bg-gray-700 text-white text-sm rounded-lg border border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 p-2"
+            >
+              {configs.map(config => (
+                <option key={config.id} value={config.id}>
+                  {config.name} ({config.provider})
+                </option>
+              ))}
+            </select>
+
+            {/* 模型选择器 */}
+            {currentConfig && (
+              <select
+                value={currentModel}
+                onChange={(e) => handleModelChange(e.target.value)}
+                className="bg-gray-700 text-white text-sm rounded-lg border border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 p-2"
+              >
+                {currentConfig.selectedModels.map(modelName => (
+                  <option key={modelName} value={modelName}>
+                    {modelName}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
           <button
             onClick={() => router.push('/settings')}
             className="ml-auto text-gray-400 hover:text-white transition-colors"

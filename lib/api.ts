@@ -23,7 +23,20 @@ const getCurrentConfig = (): ApiConfig | null => {
   if (!savedConfigs) return null;
   
   const configs = JSON.parse(savedConfigs) as ApiConfig[];
-  return configs.length > 0 ? configs[0] : null;
+  if (configs.length === 0) return null;
+
+  // 获取当前选中的配置ID
+  const currentConfigId = localStorage.getItem('current_config_id');
+  if (currentConfigId) {
+    // 返回当前选中的配置
+    const currentConfig = configs.find(config => config.id === currentConfigId);
+    if (currentConfig) {
+      return currentConfig;
+    }
+  }
+  
+  // 如果没有选中的配置，返回第一个配置作为默认值
+  return configs[0];
 };
 
 const api = axios.create({
@@ -117,7 +130,7 @@ export const sendMessage = async (
   const baseRequestData = {
     provider: currentConfig.provider,
     baseUrl: currentConfig.baseUrl,
-    selectedModels: currentConfig.selectedModels,
+    selectedModels: [model],
     currentModel: model,
     cluster,
   };

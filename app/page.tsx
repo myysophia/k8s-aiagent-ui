@@ -13,6 +13,7 @@ export default function Home() {
   const [selectedCluster, setSelectedCluster] = useState(clusters[0]);
   const [configs, setConfigs] = useState<ApiConfig[]>([]);
   const [selectedConfig, setSelectedConfig] = useState<ApiConfig | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string>('');
 
   useEffect(() => {
     // 检查用户是否已登录
@@ -29,7 +30,12 @@ export default function Home() {
       setConfigs(parsedConfigs);
       // 选择第一个配置作为默认配置
       if (parsedConfigs.length > 0) {
-        setSelectedConfig(parsedConfigs[0]);
+        const firstConfig = parsedConfigs[0];
+        setSelectedConfig(firstConfig);
+        // 选择第一个可用的模型
+        if (firstConfig.selectedModels.length > 0) {
+          setSelectedModel(firstConfig.selectedModels[0]);
+        }
       }
     }
   }, [router]);
@@ -86,7 +92,7 @@ export default function Home() {
             </div>
 
             {selectedConfig ? (
-              <Chat cluster={selectedCluster} model={selectedConfig.selectedModels[0]} />
+              <Chat cluster={selectedCluster} model={selectedModel} />
             ) : (
               <div className="text-center text-gray-400 py-8">
                 请先在设置页面配置 API
