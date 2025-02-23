@@ -1,3 +1,5 @@
+import { ChatMessage } from '../lib/api';
+
 // 支持的 API 提供商及其默认配置
 export interface ProviderConfig {
   name: string;          // 显示名称
@@ -55,4 +57,24 @@ export const DEFAULT_CONFIG: Partial<ApiConfig> = {
   baseUrl: PROVIDERS.OpenAI.baseUrl,
   selectedModels: [],
   isActive: true,
+};
+
+export interface ChatSession {
+  id: string;
+  name: string;
+  messages: ChatMessage[];
+  createdAt: number;
+  updatedAt: number;
+  model: string;
+  cluster: string;
+}
+
+export interface ChatSessionsState {
+  sessions: ChatSession[];
+  currentSessionId: string | null;
+}
+
+export const DEFAULT_SESSIONS_STATE: ChatSessionsState = {
+  sessions: [],
+  currentSessionId: null,
 }; 
