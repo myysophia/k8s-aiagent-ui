@@ -305,32 +305,38 @@ const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
       createNewSession();
     }
 
+    // 处理输入内容
+    let processedInput = input;
+    if (!input.startsWith('/')) {
+      // 如果用户没有输入/，默认添加 /execute
+      processedInput = `/execute ${input}`;
+    }
+
     // 检查命令格式
-    if (input.startsWith('/')) {
-      const parts = input.slice(1).split(' ');
-      if (parts.length < 2) {
-        setError('请输入完整的命令，例如: /diagnose pod-name -n namespace');
-        return;
-      }
-      
-      const action = parts[0].toLowerCase();
-      if (!commands.some(cmd => cmd.name === action)) {
-        setError(`不支持的命令: ${action}`);
-        return;
-      }
+    const parts = processedInput.slice(1).split(' ');
+    const action = parts[0].toLowerCase();
+    
+    if (parts.length < 2) {
+      setError('请输入完整的命令，例如: /diagnose pod-name -n namespace');
+      return;
+    }
+    
+    if (!commands.some(cmd => cmd.name === action)) {
+      setError(`不支持的命令: ${action}`);
+      return;
     }
 
     const userMessage: ChatMessage = {
       role: 'user',
-      content: input,
+      content: processedInput,
       timestamp: Date.now(),
-      type: input.startsWith('/') ? 'command' : 'chat',
+      type: 'command',
     };
 
     // 如果是会话的第一条消息，自动更新会话名称
     const currentSession = sessionsState.sessions.find(s => s.id === sessionsState.currentSessionId);
     if (currentSession && currentSession.messages.length === 0) {
-      const newName = generateSessionName(input);
+      const newName = generateSessionName(processedInput);
       updateSessionName(currentSession.id, newName);
     }
 
@@ -340,12 +346,12 @@ const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
     setShowCommands(false);
 
     try {
-      const response = await sendMessage(input, model, cluster);
+      const response = await sendMessage(processedInput, model, cluster);
       const assistantMessage: ChatMessage = {
         role: 'assistant',
         content: response.message,
         timestamp: Date.now(),
-        type: userMessage.type,
+        type: 'command',
       };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error: any) {
@@ -374,7 +380,7 @@ const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
         role: 'assistant',
         content: errorContent,
         timestamp: Date.now(),
-        type: userMessage.type,
+        type: 'command',
       };
       setMessages(prev => [...prev, errorMessage]);
       
@@ -520,6 +526,14 @@ const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
     </div>
   );
 
+  // 添加消息内容处理函数
+  const processMessageContent = (message: ChatMessage): string => {
+    if (message.type === 'command' && message.content.startsWith('/execute ')) {
+      return message.content.slice(9); // 移除 "/execute "
+    }
+    return message.content;
+  };
+
   return (
     <div className="flex h-full bg-gray-900">
       {/* 左侧边栏 */}
@@ -622,9 +636,9 @@ const Chat: React.FC<ChatProps> = ({ model, cluster }) => {
                           : 'bg-blue-100 text-gray-800'
                       }`}
                     >
-                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                      <ReactMarkdown>{processMessageContent(message)}</ReactMarkdown>
                       <button
-                        onClick={() => copyToClipboard(message.content, message.timestamp)}
+                        onClick={() => copyToClipboard(processMessageContent(message), message.timestamp)}
                         className="absolute top-2 right-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-200"
                         title="复制内容"
                       >
