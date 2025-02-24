@@ -40,7 +40,13 @@ const getCurrentConfig = (): ApiConfig | null => {
 };
 
 const api = axios.create({
+  // baseURL: 'http://60.204.218.98:8080',
   baseURL: 'http://localhost:8080',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+  withCredentials: false // 由于跨域，先设置为 false
 });
 
 // 请求拦截器：添加认证信息和 API 配置

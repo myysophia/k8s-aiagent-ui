@@ -6,6 +6,7 @@ import { PlusCircle, Bot as BotIcon } from 'lucide-react';
 import { ApiConfig, DEFAULT_CONFIG } from '../../types/api-config';
 import ApiConfigCard from '../../components/ApiConfigCard';
 import FeedbackToast from '../../components/FeedbackToast';
+import { generateUUID } from '../../lib/utils';
 
 interface FeedbackState {
   type: 'success' | 'error';
@@ -32,7 +33,7 @@ export default function Settings() {
       // 创建默认配置
       const defaultConfig: ApiConfig = {
         ...DEFAULT_CONFIG,
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         name: 'OpenAI API',
         apiKey: '',
         selectedModels: [],
@@ -55,7 +56,7 @@ export default function Settings() {
   const handleAddConfig = () => {
     const newConfig: ApiConfig = {
       ...DEFAULT_CONFIG,
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name: `配置 ${configs.length + 1}`,
       apiKey: '',
       selectedModels: [],

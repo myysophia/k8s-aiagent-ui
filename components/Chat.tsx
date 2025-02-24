@@ -5,6 +5,7 @@ import { ChatMessage, sendMessage } from '../lib/api';
 import CommandSuggestions from './CommandSuggestions';
 import { useRouter } from 'next/navigation';
 import { ApiConfig, ChatSession, ChatSessionsState, DEFAULT_SESSIONS_STATE } from '../types/api-config';
+import { generateUUID } from '../lib/utils';
 
 interface Command {
   name: string;
@@ -58,6 +59,7 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
   const [editSessionName, setEditSessionName] = useState('');
   const [showSidebar, setShowSidebar] = useState(true);
   const [configs, setConfigs] = useState<ApiConfig[]>([]);
+  const [isComposing, setIsComposing] = useState(false);
 
   useEffect(() => {
     // 从 localStorage 加载历史消息
@@ -173,7 +175,7 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
   // 创建新会话
   const createNewSession = () => {
     const newSession: ChatSession = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name: `会话 ${sessionsState.sessions.length + 1}`,
       messages: [],
       createdAt: Date.now(),
@@ -248,6 +250,10 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (isComposing) {
+      return;
+    }
+
     if (showCommands) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -753,6 +759,8 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
                     value={input}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
+                    onCompositionStart={() => setIsComposing(true)}
+                    onCompositionEnd={() => setIsComposing(false)}
                     placeholder="输入消息，按回车发送（Shift + 回车换行）"
                     className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     disabled={isLoading}
