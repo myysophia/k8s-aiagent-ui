@@ -39,7 +39,7 @@ K8s AI Agent is an intelligent Kubernetes operations assistant powered by Large 
 1. **Installation**
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/k8s-aiagent-ui.git
+git clone https://github.com/myysophia/k8s-aiagent-ui.git
 
 # Install dependencies
 cd k8s-aiagent-ui
