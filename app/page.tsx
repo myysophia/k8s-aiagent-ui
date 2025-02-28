@@ -6,7 +6,7 @@ import { Bot as BotIcon } from 'lucide-react';
 import Chat from '../components/Chat';
 import { ApiConfig } from '../types/api-config';
 
-const clusters = ['minikube', 'ems-uat-2'];
+const clusters = ['mini', 'ems-uat-2'];
 
 export default function Home() {
   const router = useRouter();

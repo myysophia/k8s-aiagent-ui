@@ -562,10 +562,34 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
 
   // 添加消息内容处理函数
   const processMessageContent = (message: ChatMessage): string => {
-    if (message.type === 'command' && message.content.startsWith('/execute ')) {
-      return message.content.slice(9); // 移除 "/execute "
+    let content = message.content;
+    
+    // 如果内容是 JSON 字符串，尝试解析它
+    if (typeof content === 'string' && content.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(content);
+        if (parsed.message) {
+          // 尝试解析内部的 message 字段
+          try {
+            const innerParsed = JSON.parse(parsed.message);
+            if (innerParsed.final_answer) {
+              content = innerParsed.final_answer;
+            }
+          } catch {
+            content = parsed.message;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse message content:', e);
+      }
     }
-    return message.content;
+
+    // 移除命令前缀
+    if (message.type === 'command' && content.startsWith('/execute ')) {
+      content = content.slice(9);
+    }
+
+    return content;
   };
 
   // 切换 API 配置
@@ -673,8 +697,8 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
         </div>
 
         {/* 消息区域 */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 p-4 overflow-y-auto">
             <div className="max-w-5xl mx-auto space-y-6">
               {messages.map((message) => (
                 <div
@@ -714,7 +738,19 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
                           : 'bg-blue-100 text-gray-800'
                       }`}
                     >
-                      <ReactMarkdown>{processMessageContent(message)}</ReactMarkdown>
+                      <div className="markdown-content">
+                        <ReactMarkdown
+                          components={{
+                            h3: ({children}) => <h3 className="text-lg font-semibold mb-2">{children}</h3>,
+                            ul: ({children}) => <ul className="list-disc list-inside mb-4 space-y-1">{children}</ul>,
+                            li: ({children}) => <li className="text-base whitespace-pre-wrap break-words">{children}</li>,
+                            code: ({children}) => <code className="bg-gray-700 text-blue-300 px-1 py-0.5 rounded font-mono text-sm whitespace-pre-wrap break-words">{children}</code>,
+                            p: ({children}) => <p className="mb-4 last:mb-0 whitespace-pre-wrap break-words">{children}</p>
+                          }}
+                        >
+                          {processMessageContent(message)}
+                        </ReactMarkdown>
+                      </div>
                       <button
                         onClick={() => copyToClipboard(processMessageContent(message), message.timestamp)}
                         className="absolute top-2 right-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-200"
