@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, KeyboardEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Send, Bot, User, Loader2, Terminal, MessageSquare, Settings, Copy, Check, Trash, Download, Plus, Pencil, X, ChevronDown } from 'lucide-react';
 import { ChatMessage, sendMessage } from '../lib/api';
 import CommandSuggestions from './CommandSuggestions';
@@ -740,12 +741,19 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
                     >
                       <div className="markdown-content">
                         <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
                           components={{
                             h3: ({children}) => <h3 className="text-lg font-semibold mb-2">{children}</h3>,
                             ul: ({children}) => <ul className="list-disc list-inside mb-4 space-y-1">{children}</ul>,
                             li: ({children}) => <li className="text-base whitespace-pre-wrap break-words">{children}</li>,
                             code: ({children}) => <code className="bg-gray-700 text-blue-300 px-1 py-0.5 rounded font-mono text-sm whitespace-pre-wrap break-words">{children}</code>,
-                            p: ({children}) => <p className="mb-4 last:mb-0 whitespace-pre-wrap break-words">{children}</p>
+                            p: ({children}) => <p className="mb-4 last:mb-0 whitespace-pre-wrap break-words">{children}</p>,
+                            table: ({children}) => <table className="min-w-full border-collapse border border-gray-600 mb-4">{children}</table>,
+                            thead: ({children}) => <thead className="bg-gray-700">{children}</thead>,
+                            tbody: ({children}) => <tbody>{children}</tbody>,
+                            tr: ({children}) => <tr className="border-b border-gray-600 hover:bg-gray-700/50">{children}</tr>,
+                            th: ({children}) => <th className="px-4 py-2 text-left font-semibold text-white border-r border-gray-600 last:border-r-0">{children}</th>,
+                            td: ({children}) => <td className="px-4 py-2 border-r border-gray-600 last:border-r-0 whitespace-pre-wrap break-words">{children}</td>
                           }}
                         >
                           {processMessageContent(message)}
