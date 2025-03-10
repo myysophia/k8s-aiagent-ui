@@ -13,19 +13,19 @@ export const PROVIDERS: Record<string, ProviderConfig> = {
   OpenAI: {
     name: 'OpenAI',
     baseUrl: 'https://api.openai.com/v1',
-    models: ['gpt-4', 'gpt-3.5-turbo'],
+    models: ['gpt-4o', 'gpt-3.5-turbo'],
     keyPattern: /^sk-[A-Za-z0-9]{32,}$/,
-    description: '支持 GPT-4 和 GPT-3.5 系列模型',
+    description: '支持 GPT-4o 和 GPT-3.5 系列模型',
   },
-  Anthropic: {
-    name: 'Anthropic',
-    baseUrl: 'https://api.anthropic.com/v1',
-    models: ['claude-3-opus', 'claude-3-sonnet'],
+  Qwen: {
+    name: '阿里通义千问',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    models: ['qwen-plus', 'qwen-max'],
     keyPattern: /^sk-ant-[A-Za-z0-9]{32,}$/,
-    description: '支持 Claude 系列模型',
+    description: '支持 qwen系列funtion call能力模型',
   },
   Custom: {
-    name: '自定义',
+    name: '本地ollama 模型 13b',
     baseUrl: 'http://localhost:8080',
     models: [],
     description: '自定义 API 端点和模型',
