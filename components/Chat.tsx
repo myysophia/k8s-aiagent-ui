@@ -806,9 +806,26 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
                     onCompositionStart={() => setIsComposing(true)}
                     onCompositionEnd={() => setIsComposing(false)}
                     placeholder="输入消息，按回车发送（Shift + 回车换行）"
-                    className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    disabled={isLoading}
+                    className={`w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      !currentConfig ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    disabled={!currentConfig}
                   />
+                  <button
+                    type="submit"
+                    disabled={isLoading || !input.trim() || !currentConfig}
+                    className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors duration-200 ${
+                      isLoading || !input.trim() || !currentConfig
+                        ? 'text-gray-500 cursor-not-allowed'
+                        : 'text-blue-500 hover:bg-gray-600'
+                    }`}
+                  >
+                    {isLoading ? (
+                      <Loader2 size={20} className="animate-spin" />
+                    ) : (
+                      <Send size={20} />
+                    )}
+                  </button>
                   <CommandSuggestions
                     isVisible={showCommands}
                     filter={input}
@@ -820,23 +837,6 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
                     selectedIndex={selectedCommandIndex}
                   />
                 </div>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex items-center justify-center px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      发送中
-                    </>
-                  ) : (
-                    <>
-                      发送
-                      <Send className="w-4 h-4 ml-2" />
-                    </>
-                  )}
-                </button>
               </form>
             </div>
           </div>
