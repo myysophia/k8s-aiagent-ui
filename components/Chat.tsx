@@ -156,10 +156,10 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
 
   // 保存会话状态
   useEffect(() => {
-    if (sessionsState.currentSessionId) {
+    if (sessionsState.currentSessionId && messages) {
       const updatedSessions = sessionsState.sessions.map(session => 
         session.id === sessionsState.currentSessionId
-          ? { ...session, messages, updatedAt: Date.now() }
+          ? { ...session, messages: [...messages], updatedAt: Date.now() }
           : session
       );
       
@@ -171,10 +171,24 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
       setSessionsState(newSessionsState);
       localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
     }
-  }, [messages]);
+  }, [messages, sessionsState.currentSessionId]);
 
   // 创建新会话
   const createNewSession = () => {
+    // 先保存当前会话的状态
+    if (sessionsState.currentSessionId) {
+      const updatedSessions = sessionsState.sessions.map(session => 
+        session.id === sessionsState.currentSessionId
+          ? { ...session, messages: [...messages], updatedAt: Date.now() }
+          : session
+      );
+      setSessionsState(prev => ({
+        ...prev,
+        sessions: updatedSessions
+      }));
+    }
+
+    // 创建新会话
     const newSession: ChatSession = {
       id: generateUUID(),
       name: `会话 ${sessionsState.sessions.length + 1}`,
@@ -185,22 +199,47 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
       cluster,
     };
 
+    // 更新会话状态
     const newSessionsState = {
-      sessions: [...sessionsState.sessions, newSession],
+      sessions: [...(sessionsState.sessions || []), newSession],
       currentSessionId: newSession.id,
     };
 
-    setSessionsState(newSessionsState);
+    // 重置状态
+    setIsLoading(false);
+    setInput('');
+    setError(null);
     setMessages([]);
+    setSessionsState(newSessionsState);
     localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
   };
 
   // 切换会话
   const switchSession = (sessionId: string) => {
+    // 先保存当前会话的状态
+    if (sessionsState.currentSessionId) {
+      const updatedSessions = sessionsState.sessions.map(session => 
+        session.id === sessionsState.currentSessionId
+          ? { ...session, messages: [...messages], updatedAt: Date.now() }
+          : session
+      );
+      setSessionsState(prev => ({
+        ...prev,
+        sessions: updatedSessions
+      }));
+    }
+
+    // 切换到新会话
     const session = sessionsState.sessions.find(s => s.id === sessionId);
     if (session) {
-      setSessionsState(prev => ({ ...prev, currentSessionId: sessionId }));
-      setMessages(session.messages);
+      setSessionsState(prev => ({ 
+        ...prev, 
+        currentSessionId: sessionId 
+      }));
+      setMessages(session.messages || []);
+      setIsLoading(false);
+      setInput('');
+      setError(null);
     }
   };
 
@@ -328,7 +367,7 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
   // 修改 handleSubmit 函数
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
 
     if (!currentConfig) {
       setError('请先在设置页面配置 API');
@@ -343,7 +382,6 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
     // 处理输入内容
     let processedInput = input;
     if (!input.startsWith('/')) {
-      // 如果用户没有输入/，默认添加 /execute
       processedInput = `/execute ${input}`;
     }
 
@@ -368,17 +406,37 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
       type: 'command',
     };
 
+    // 保存当前会话 ID，以防在请求过程中切换会话
+    const currentSessionId = sessionsState.currentSessionId;
+
     // 如果是会话的第一条消息，自动更新会话名称
-    const currentSession = sessionsState.sessions.find(s => s.id === sessionsState.currentSessionId);
+    const currentSession = sessionsState.sessions.find(s => s.id === currentSessionId);
     if (currentSession && currentSession.messages.length === 0) {
       const newName = generateSessionName(processedInput);
       updateSessionName(currentSession.id, newName);
     }
 
-    setMessages(prev => [...prev, userMessage]);
+    // 更新消息和状态
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInput('');
     setIsLoading(true);
     setShowCommands(false);
+
+    // 立即更新会话状态
+    const updatedSessions = sessionsState.sessions.map(session => 
+      session.id === currentSessionId
+        ? { ...session, messages: newMessages, updatedAt: Date.now() }
+        : session
+    );
+    
+    const newSessionsState = {
+      ...sessionsState,
+      sessions: updatedSessions,
+    };
+    
+    setSessionsState(newSessionsState);
+    localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
 
     try {
       const response = await sendMessage(processedInput, currentModel, cluster);
@@ -388,18 +446,35 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
         timestamp: Date.now(),
         type: 'command',
       };
-      setMessages(prev => [...prev, assistantMessage]);
+      
+      // 确保消息被添加到正确的会话中
+      if (sessionsState.currentSessionId === currentSessionId) {
+        const newMessages = [...messages, userMessage, assistantMessage];
+        setMessages(newMessages);
+        
+        // 立即更新会话状态
+        const updatedSessions = sessionsState.sessions.map(session => 
+          session.id === currentSessionId
+            ? { ...session, messages: newMessages, updatedAt: Date.now() }
+            : session
+        );
+        
+        const newSessionsState = {
+          ...sessionsState,
+          sessions: updatedSessions,
+        };
+        
+        setSessionsState(newSessionsState);
+        localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
+      }
     } catch (error: any) {
-      // 检查是否有响应数据
       const responseData = error.response?.data;
       let errorContent = '';
       
-      // 优先使用友好错误消息
       if (error.friendlyMessage) {
         errorContent = error.friendlyMessage;
       } else if (typeof responseData === 'string') {
         try {
-          // 尝试解析 JSON 字符串
           const parsedData = JSON.parse(responseData);
           errorContent = parsedData.message;
         } catch {
@@ -417,14 +492,35 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
         timestamp: Date.now(),
         type: 'command',
       };
-      setMessages(prev => [...prev, errorMessage]);
       
-      // 如果是配置错误，提示用户前往设置页面
+      // 确保错误消息被添加到正确的会话中
+      if (sessionsState.currentSessionId === currentSessionId) {
+        const newMessages = [...messages, userMessage, errorMessage];
+        setMessages(newMessages);
+        
+        // 立即更新会话状态
+        const updatedSessions = sessionsState.sessions.map(session => 
+          session.id === currentSessionId
+            ? { ...session, messages: newMessages, updatedAt: Date.now() }
+            : session
+        );
+        
+        const newSessionsState = {
+          ...sessionsState,
+          sessions: updatedSessions,
+        };
+        
+        setSessionsState(newSessionsState);
+        localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
+      }
+      
       if (error.message?.includes('API 配置')) {
         setTimeout(() => router.push('/settings'), 2000);
       }
     } finally {
-      setIsLoading(false);
+      if (sessionsState.currentSessionId === currentSessionId) {
+        setIsLoading(false);
+      }
     }
   };
 
