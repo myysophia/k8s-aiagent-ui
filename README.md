@@ -78,7 +78,7 @@ npm run dev
 ### License
 MIT License
 ### Contact me
-![image](https://github.com/user-attachments/assets/b39a7a1e-3a98-4175-9e3e-c991f37de469)
+<img width="247" alt="image" src="https://github.com/user-attachments/assets/d883080c-87d1-46b4-b128-8bb6d0e73e69" />
 
 ---
 
@@ -177,5 +177,5 @@ npm run dev
 ### 开源协议
 MIT License
 ### 联系方式
-![image](https://github.com/user-attachments/assets/82f88e15-5694-4828-affa-17f950af4842)
+<img width="247" alt="image" src="https://github.com/user-attachments/assets/a33ae4fe-53b6-4c3d-99df-e79e06c07197" />
 
