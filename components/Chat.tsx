@@ -37,10 +37,50 @@ const commands: Command[] = [
   }
 ];
 
+interface QuestionCategory {
+  title: string;
+  questions: Question[];
+}
+
+interface Question {
+  id: string;
+  text: string;
+  command: string;
+}
+
+
 interface ChatProps {
   model: string;
   cluster: string;
 }
+
+// 添加问题类别和示例
+const questionCategories = [
+  {
+    title: "查询集群信息",
+    examples: [
+      "集群名称是什么？",
+      "集群的节点信息是什么？",
+      "请将集群当前节点node name、cpu、内存、可用区、ip输出在表格中"
+    ]
+  },
+  {
+    title: "查询K8s资源",
+    examples: [
+      "account pod的镜像版本是什么？",
+      "device-gateway pod中当前目录的novastar_timen内容是什么？",
+      "iotdb-datanode-0 pod的env中的dn_rpc_port端口是什么？",
+      "ems-common-front cm的外部网关是什么？",
+      "请帮我输出ems-uat ns下所有pod的资源分配情况，输出在表格中: pod name、memory request、memory limit、cpu rquest、cpu limit"
+    ]
+  },
+  {
+    title: "查询日志",
+    examples: [
+      "account pod的日志,只展示最后10条"
+    ]
+  }
+];
 
 const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
   const router = useRouter();
@@ -61,6 +101,8 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
   const [showSidebar, setShowSidebar] = useState(true);
   const [configs, setConfigs] = useState<ApiConfig[]>([]);
   const [isComposing, setIsComposing] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(true);
 
   useEffect(() => {
     // 从 localStorage 加载历史消息
@@ -368,6 +410,9 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
+
+    // 关闭问题示例
+    setShowHelp(false);
 
     if (!currentConfig) {
       setError('请先在设置页面配置 API');
@@ -708,9 +753,15 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
     setCurrentModel(modelName);
   };
 
+  // 添加处理问题点击的函数
+  const handleQuestionClick = (command: string) => {
+    setInput(command);
+    inputRef.current?.focus();
+  };
+
   return (
     <div className="flex h-full bg-gray-900">
-      {/* 左侧边栏 */}
+      {/* 左侧边栏 - 仅保留会话列表 */}
       <div className={`${showSidebar ? 'w-80' : 'w-0'} flex-shrink-0 bg-gray-800 transition-all duration-300 overflow-hidden`}>
         <div className="flex flex-col h-full p-2">
           <button
@@ -793,8 +844,67 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
           </button>
         </div>
 
+        {/* 优化的功能介绍区域 */}
+        {showHelp && (
+          <div className="bg-gradient-to-r from-gray-800 to-gray-900 p-5 border-b border-gray-700 relative">
+            <div className="max-w-5xl mx-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-white flex items-center">
+                  <MessageSquare className="w-5 h-5 mr-2 text-blue-400" />
+                  我是k8s小助手,下面是一些问题示例:
+                </h3>
+                <button 
+                  onClick={() => setShowHelp(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                  title="关闭帮助"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {questionCategories.map((category) => (
+                  <div 
+                    key={category.title} 
+                    className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700 hover:border-blue-500/50 transition-all shadow-lg hover:shadow-blue-500/10"
+                  >
+                    <h4 className="text-blue-400 font-medium mb-3 pb-2 border-b border-gray-700">{category.title}</h4>
+                    <ul className="text-sm text-gray-300 space-y-2 pl-2">
+                      {category.examples.map((example, index) => (
+                        <li key={index} className="flex items-start">
+                          <div className="min-w-4 text-blue-500 mr-2">•</div>
+                          <span className="text-gray-300 hover:text-white cursor-pointer transition-colors"
+                                onClick={() => {
+                                  setInput(example);
+                                  inputRef.current?.focus();
+                                }}>
+                            {example}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 消息区域 */}
         <div className="flex-1 flex flex-col min-h-0">
+          {/* 如果帮助栏被关闭，添加一个按钮可以重新打开 */}
+          {!showHelp && (
+            <div className="flex justify-center py-2 bg-gray-800/50 border-b border-gray-700">
+              <button 
+                onClick={() => setShowHelp(true)}
+                className="text-sm text-gray-400 hover:text-white flex items-center transition-colors"
+              >
+                <MessageSquare className="w-4 h-4 mr-1" />
+                显示功能帮助
+              </button>
+            </div>
+          )}
+          
           <div className="flex-1 p-4 overflow-y-auto">
             <div className="max-w-5xl mx-auto space-y-6">
               {messages.map((message) => (
