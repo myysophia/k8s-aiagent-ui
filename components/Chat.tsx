@@ -63,7 +63,8 @@ const questionCategories = [
     examples: [
       "集群名称是什么？",
       "集群的节点信息是什么？",
-      "请将集群当前节点node name、cpu、内存、可用区、ip输出在表格中"
+      "请将集群当前节点node name、cpu、内存、可用区、ip输出在表格中",
+      "帮我切换到ems-uat-2集群"
     ]
   },
   {
@@ -77,9 +78,11 @@ const questionCategories = [
     ]
   },
   {
-    title: "查询日志",
+    title: "查询日志/event",
     examples: [
-      "account pod的日志,只展示最后10条"
+      "account pod的日志,只展示最后10条",
+      "集群的最近20条event",
+      "查询pod内的日志,需要提供pod name、日志路径"
     ]
   }
 ];
