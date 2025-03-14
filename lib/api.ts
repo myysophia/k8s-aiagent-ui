@@ -127,37 +127,15 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
 // 发送消息
 export async function sendMessage(message: string, model: string, cluster: string): Promise<any> {
   try {
-    // 从本地存储获取当前配置
-    const currentConfigId = localStorage.getItem('current_config_id');
-    const savedConfigs = localStorage.getItem('api_configs');
+    console.log('Current JWT:', localStorage.getItem('jwt'));
     
-    if (!savedConfigs || !currentConfigId) {
-      throw new Error('API 配置未找到，请先在设置页面配置 API');
-    }
-    
-    const configs = JSON.parse(savedConfigs);
-    const currentConfig = configs.find(c => c.id === currentConfigId);
-    
-    if (!currentConfig) {
-      throw new Error('当前选择的 API 配置未找到');
-    }
-    
-    if (!currentConfig.apiKey) {
-      throw new Error('API 密钥未设置，请在设置页面配置 API 密钥');
-    }
-    
-    // 添加 X-API-KEY 头
-    const headers = {
-      'Content-Type': 'application/json',
-      'X-API-KEY': currentConfig.apiKey
-    };
-    
-    // 使用绝对 URL
-    const response = await axios.post('http://localhost:8080/api/execute', {
+    // 不需要手动获取配置和设置头部，因为 api 实例已经配置了拦截器
+    // 使用 api 实例而不是直接使用 axios
+    const response = await api.post('/api/execute', {
       message,
       model,
       cluster
-    }, { headers });
+    });
     
     return response.data;
   } catch (error) {
@@ -168,12 +146,19 @@ export async function sendMessage(message: string, model: string, cluster: strin
     }
     
     // 提供更友好的错误消息
-    if (axios.isAxiosError(error) && error.response?.status === 401) {
-      const friendlyMessage = '认证失败：API 密钥无效或已过期，请检查设置页面的 API 配置';
-      const enhancedError = new Error(friendlyMessage);
-      (enhancedError as any).friendlyMessage = friendlyMessage;
-      (enhancedError as any).response = error.response;
-      throw enhancedError;
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 401) {
+        // 使用拦截器中已经处理的友好消息
+        if ((error as any).friendlyMessage) {
+          throw error;
+        }
+        
+        const friendlyMessage = '认证失败：API 密钥或令牌无效，请检查设置或重新登录';
+        const enhancedError = new Error(friendlyMessage);
+        (enhancedError as any).friendlyMessage = friendlyMessage;
+        (enhancedError as any).response = error.response;
+        throw enhancedError;
+      }
     }
     
     throw error;
