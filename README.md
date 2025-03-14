@@ -6,6 +6,7 @@
 
 ### Introduction
 K8s AI Agent is an intelligent Kubernetes operations assistant powered by Large Language Models (LLMs). It helps DevOps teams manage and diagnose Kubernetes clusters through natural language interaction.
+<img width="1497" alt="image" src="https://github.com/user-attachments/assets/5df5bf15-c737-48ad-ae85-6d984563e470" />
 
 ### Key Features
 1. **Intelligent Command Execution**
@@ -74,6 +75,8 @@ MIT License
 
 ### 项目介绍
 K8s AI Agent 是一个基于大语言模型的 Kubernetes 智能运维助手，通过自然语言交互方式，帮助运维团队更高效地管理和诊断 Kubernetes 集群。
+<img width="1497" alt="image" src="https://github.com/user-attachments/assets/d69b11ff-380f-4121-a224-075759de4ba2" />
+
 
 ### 核心功能
 1. **智能命令执行**
