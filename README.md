@@ -29,11 +29,19 @@ K8s AI Agent is an intelligent Kubernetes operations assistant powered by Large 
    - Configurable models for different scenarios
    - Flexible API configuration management
 
+5. **Enhanced User Experience**
+   - Light/Dark mode theme switching
+   - Guided question suggestions
+   - Session management with history
+   - Markdown and code syntax highlighting
+
 ### Technical Stack
-- Frontend: Next.js 13+, TypeScript, Tailwind CSS
-- Authentication: LDAP Integration, JWT
+- Frontend: Next.js 15+, React 19, TypeScript, Tailwind CSS
+- State Management: Local Storage for configurations and sessions
+- UI Components: Lucide React for icons, React Markdown for content rendering
+- Theming: next-themes for light/dark mode support
 - Security: API Key Management, Fine-grained Access Control
-- UI/UX: Real-time Response, Markdown Support, Dark Theme
+- UI/UX: Real-time Response, Markdown Support, Responsive Design
 
 ### Getting Started
 
@@ -51,19 +59,19 @@ npm run dev
 ```
 
 2. **Configuration**
-- Configure LDAP authentication
-- Set up API providers and keys
-- Configure Kubernetes cluster access
+- Set up API providers and keys in the Settings page
+- Configure model selection
+- Customize theme preferences
 
 3. **Usage**
 - Access http://localhost:3000
-- Log in with LDAP credentials
+- Configure your API settings
 - Start interacting with your clusters
+- Use the suggested questions or type your own commands
 
 ### Security Features
-- Enterprise LDAP Authentication
-- JWT Token Authentication
 - API Key Management
+- Secure Storage of Configurations
 - Operation Audit Logging
 
 ### License
@@ -99,18 +107,26 @@ K8s AI Agent 是一个基于大语言模型的 Kubernetes 智能运维助手，�
    - 可配置不同场景使用不同模型
    - 灵活的 API 配置管理
 
+5. **增强用户体验**
+   - 浅色/深色主题切换
+   - 引导式问题建议
+   - 会话管理与历史记录
+   - Markdown 和代码语法高亮
+
 ### 技术栈
-- 前端：Next.js 13+、TypeScript、Tailwind CSS
-- 认证：LDAP 集成、JWT
+- 前端：Next.js 15+、React 19、TypeScript、Tailwind CSS
+- 状态管理：本地存储配置和会话信息
+- UI 组件：Lucide React 图标库、React Markdown 内容渲染
+- 主题：next-themes 实现浅色/深色模式支持
 - 安全：API 密钥管理、细粒度访问控制
-- 界面：实时响应、Markdown 支持、深色主题
+- 界面：实时响应、Markdown 支持、响应式设计
 
 ### 快速开始
 
 1. **安装**
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/k8s-aiagent-ui.git
+git clone https://github.com/myysophia/k8s-aiagent-ui.git
 
 # 安装依赖
 cd k8s-aiagent-ui
@@ -121,19 +137,19 @@ npm run dev
 ```
 
 2. **配置**
-- 配置 LDAP 认证
-- 设置 API 提供商和密钥
-- 配置 Kubernetes 集群访问
+- 在设置页面配置 API 提供商和密钥
+- 配置模型选择
+- 自定义主题偏好
 
 3. **使用**
 - 访问 http://localhost:3000
-- 使用 LDAP 凭据登录
+- 配置 API 设置
 - 开始与集群交互
+- 使用推荐问题或输入自定义命令
 
 ### 安全特性
-- 企业级 LDAP 认证
-- JWT 令牌认证
 - API 密钥管理
+- 配置安全存储
 - 操作审计日志
 
 ### 使用场景
