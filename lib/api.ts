@@ -127,15 +127,50 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
 // 发送消息
 export async function sendMessage(message: string, model: string, cluster: string): Promise<any> {
   try {
-    console.log('Current JWT:', localStorage.getItem('jwt'));
+    // 解析命令
+    let instructions = '';
+    let args = '';
     
-    // 不需要手动获取配置和设置头部，因为 api 实例已经配置了拦截器
-    // 使用 api 实例而不是直接使用 axios
-    const response = await api.post('/api/execute', {
-      message,
-      model,
-      cluster
-    });
+    if (message.startsWith('/')) {
+      const parts = message.slice(1).split(' ');
+      instructions = parts[0].toLowerCase();
+      args = parts.slice(1).join(' ');
+    } else {
+      // 如果用户没有输入/，默认添加 execute
+      instructions = 'execute';
+      args = message;
+    }
+    
+    // 从本地存储获取当前配置
+    const currentConfigId = localStorage.getItem('current_config_id');
+    const savedConfigs = localStorage.getItem('api_configs');
+    
+    if (!savedConfigs || !currentConfigId) {
+      throw new Error('API 配置未找到，请先在设置页面配置 API');
+    }
+    
+    const configs = JSON.parse(savedConfigs);
+    const currentConfig = configs.find(c => c.id === currentConfigId);
+    
+    if (!currentConfig) {
+      throw new Error('当前选择的 API 配置未找到');
+    }
+    
+    // 构建与后端期望的请求体结构匹配的对象
+    const requestBody = {
+      instructions: instructions,
+      args: args,
+      provider: currentConfig.provider,
+      baseUrl: currentConfig.baseUrl,
+      currentModel: model,
+      cluster: cluster,
+      selectedModels: currentConfig.selectedModels || []
+    };
+    
+    console.log('Sending request body:', requestBody);
+    
+    // 使用 api 实例发送请求
+    const response = await api.post('/api/execute', requestBody);
     
     return response.data;
   } catch (error) {
