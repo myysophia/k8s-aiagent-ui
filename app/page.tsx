@@ -73,10 +73,6 @@ export default function Home() {
           <div className="h-full bg-gray-800 bg-opacity-90">
             <div className="flex flex-col sm:flex-row justify-between items-center px-6 py-4 border-b border-gray-700">
               <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
-                <div className="text-white text-sm">
-                  集群选择：
-                </div>
-                
                 <select
                   value={selectedCluster}
                   onChange={(e) => setSelectedCluster(e.target.value)}
