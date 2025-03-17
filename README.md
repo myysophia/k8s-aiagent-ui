@@ -25,9 +25,10 @@ K8s AI Agent is an intelligent Kubernetes operations assistant powered by Large 
    - Provide optimization suggestions
 
 4. **Multi-Model Support**
-   - Support multiple AI providers (OpenAI, Anthropic, etc.)
+   - Support multiple AI providers (OpenAI, Qwen, etc.)
    - Configurable models for different scenarios
    - Flexible API configuration management
+<img width="1302" alt="image" src="https://github.com/user-attachments/assets/5ad4eae7-ea4f-4e04-b00d-ac1e1de84678" />
 
 5. **Enhanced User Experience**
    - Light/Dark mode theme switching
@@ -76,6 +77,8 @@ npm run dev
 
 ### License
 MIT License
+### Contact me
+<img width="247" alt="image" src="https://github.com/user-attachments/assets/d883080c-87d1-46b4-b128-8bb6d0e73e69" />
 
 ---
 
@@ -103,9 +106,10 @@ K8s AI Agent 是一个基于大语言模型的 Kubernetes 智能运维助手，�
    - 提供优化建议
 
 4. **多模型支持**
-   - 支持多个 AI 模型提供商（OpenAI、Anthropic 等）
+   - 支持多个 AI 模型提供商（OpenAI、Qwen 等）
    - 可配置不同场景使用不同模型
    - 灵活的 API 配置管理
+<img width="1302" alt="image" src="https://github.com/user-attachments/assets/b4613240-43a4-4528-bbf2-3509421ef044" />
 
 5. **增强用户体验**
    - 浅色/深色主题切换
@@ -172,3 +176,6 @@ npm run dev
 
 ### 开源协议
 MIT License
+### 联系方式
+<img width="247" alt="image" src="https://github.com/user-attachments/assets/a33ae4fe-53b6-4c3d-99df-e79e06c07197" />
+
