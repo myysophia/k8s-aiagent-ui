@@ -253,16 +253,20 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster = 'mini' }) =>
   // 创建新会话
   const createNewSession = () => {
     // 先保存当前会话的状态
-    if (sessionsState.currentSessionId) {
+    if (sessionsState.currentSessionId && messages.length > 0) {
       const updatedSessions = sessionsState.sessions.map(session => 
         session.id === sessionsState.currentSessionId
           ? { ...session, messages: [...messages], updatedAt: Date.now() }
           : session
       );
-      setSessionsState(prev => ({
-        ...prev,
-        sessions: updatedSessions
-      }));
+      
+      const newSessionsState = {
+        ...sessionsState,
+        sessions: updatedSessions,
+      };
+      
+      setSessionsState(newSessionsState);
+      localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
     }
 
     // 创建新会话
@@ -278,7 +282,7 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster = 'mini' }) =>
 
     // 更新会话状态
     const newSessionsState = {
-      sessions: [...(sessionsState.sessions || []), newSession],
+      sessions: [...sessionsState.sessions, newSession],
       currentSessionId: newSession.id,
     };
 
@@ -293,26 +297,42 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster = 'mini' }) =>
 
   // 切换会话
   const switchSession = (sessionId: string) => {
+    // 如果点击的是当前会话，直接返回
+    if (sessionId === sessionsState.currentSessionId) {
+      return;
+    }
+
+    let newSessionsState;
     // 先保存当前会话的状态
-    if (sessionsState.currentSessionId) {
+    if (sessionsState.currentSessionId && messages.length > 0) {
       const updatedSessions = sessionsState.sessions.map(session => 
         session.id === sessionsState.currentSessionId
           ? { ...session, messages: [...messages], updatedAt: Date.now() }
           : session
       );
-      setSessionsState(prev => ({
-        ...prev,
-        sessions: updatedSessions
-      }));
+      
+      // 批量更新状态
+      newSessionsState = {
+        ...sessionsState,
+        sessions: updatedSessions,
+        currentSessionId: sessionId,
+      };
+      
+      setSessionsState(newSessionsState);
+      localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
+    } else {
+      // 如果没有需要保存的消息，直接切换会话
+      newSessionsState = {
+        ...sessionsState,
+        currentSessionId: sessionId,
+      };
+      setSessionsState(newSessionsState);
     }
 
     // 切换到新会话
     const session = sessionsState.sessions.find(s => s.id === sessionId);
     if (session) {
-      setSessionsState(prev => ({ 
-        ...prev, 
-        currentSessionId: sessionId 
-      }));
+      // 重置状态
       setMessages(session.messages || []);
       setIsLoading(false);
       setInput('');
