@@ -896,8 +896,12 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
         </div>
 
         {/* 功能介绍区域 - 优化浅色模式配色 */}
-        {showHelp && (
-          <div className="bg-gradient-to-r from-blue-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 p-5 border-b border-gray-200 dark:border-gray-700 relative">
+        <div 
+          className={`bg-gradient-to-r from-blue-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700 relative transition-all duration-300 ease-in-out ${
+            showHelp ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
+          }`}
+        >
+          <div className="p-5">
             <div className="max-w-5xl mx-auto">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium text-gray-800 dark:text-white flex items-center">
@@ -931,7 +935,13 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
                       />
                     </button>
                     
-                    {expandedCategory === category.title && (
+                    <div 
+                      className={`transition-all duration-200 ease-in-out ${
+                        expandedCategory === category.title 
+                          ? 'max-h-[500px] opacity-100' 
+                          : 'max-h-0 opacity-0 overflow-hidden'
+                      }`}
+                    >
                       <div className="px-4 pb-4">
                         <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-2 pl-2">
                           {category.examples.map((example, index) => (
@@ -958,13 +968,13 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
                           ))}
                         </ul>
                       </div>
-                    )}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           </div>
-        )}
+        </div>
 
         {/* 如果帮助栏被关闭，添加一个按钮可以重新打开 */}
         {!showHelp && (
