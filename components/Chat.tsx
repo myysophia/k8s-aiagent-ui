@@ -53,7 +53,7 @@ interface Question {
 
 interface ChatProps {
   model: string;
-  cluster: string;
+  cluster?: string;
 }
 
 // 添加问题类别和示例
@@ -62,7 +62,7 @@ const questionCategories = [
     title: "查询集群信息",
     examples: [
       "当前集群的api-server地址是什么?",
-      "当前kubeconfig都有什么权限?",
+      "查询集群列表,输出格式集群名称、api-server地址",
       "请将集群当前节点node name、cpu、内存、可用区、ip输出在表格中",
       "帮我切换到ems-uat-2集群",
       "查询集群的版本信息",
@@ -110,7 +110,7 @@ const questionCategories = [
   }
 ];
 
-const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
+const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster = 'mini' }) => {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');

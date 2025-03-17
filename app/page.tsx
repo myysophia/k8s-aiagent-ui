@@ -6,11 +6,8 @@ import { Bot as BotIcon } from 'lucide-react';
 import Chat from '../components/Chat';
 import { ApiConfig } from '../types/api-config';
 
-const clusters = ['mini', 'ems-uat-2'];
-
 export default function Home() {
   const router = useRouter();
-  const [selectedCluster, setSelectedCluster] = useState(clusters[0]);
   const [configs, setConfigs] = useState<ApiConfig[]>([]);
   const [selectedConfig, setSelectedConfig] = useState<ApiConfig | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>('');
@@ -71,24 +68,8 @@ export default function Home() {
       <main className="pt-[60px] h-screen">
         <div className="h-full">
           <div className="h-full bg-gray-800 bg-opacity-90">
-            <div className="flex flex-col sm:flex-row justify-between items-center px-6 py-4 border-b border-gray-700">
-              <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
-                <select
-                  value={selectedCluster}
-                  onChange={(e) => setSelectedCluster(e.target.value)}
-                  className="w-full sm:w-32 p-2 bg-white text-gray-900 rounded-lg border border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {clusters.map((cluster) => (
-                    <option key={cluster} value={cluster}>
-                      {cluster}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
             {selectedConfig ? (
-              <Chat cluster={selectedCluster} model={selectedModel} />
+              <Chat model={selectedModel} />
             ) : (
               <div className="text-center text-gray-400 py-8">
                 请先在设置页面配置 API
