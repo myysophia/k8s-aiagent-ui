@@ -7,8 +7,22 @@ COPY . .
 RUN npm run build
 
 # 生产阶段
-FROM nginx:alpine
-COPY --from=builder /app/out /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+FROM node:18-alpine
+WORKDIR /app
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/next.config.js ./
+
+# 仅安装生产依赖
+RUN npm ci --only=production
+
+# 设置环境变量
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# 暴露端口
+EXPOSE 3000
+
+# 启动命令
+CMD ["npm", "start"]

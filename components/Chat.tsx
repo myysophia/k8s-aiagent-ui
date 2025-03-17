@@ -61,20 +61,23 @@ const questionCategories = [
   {
     title: "查询集群信息",
     examples: [
-      "集群名称是什么？",
-      "集群的节点信息是什么？",
+      "当前集群的api-server地址是什么?",
+      "当前kubeconfig都有什么权限?",
       "请将集群当前节点node name、cpu、内存、可用区、ip输出在表格中",
-      "帮我切换到ems-uat-2集群"
+      "帮我切换到ems-uat-2集群",
+      "查询集群的版本信息",
+      "集群中 CPU 和内存Top3 Pod,并分析原因?"
     ]
   },
   {
     title: "查询K8s资源",
     examples: [
-      "account pod的镜像版本是什么？",
-      "device-gateway pod中当前目录的novastar_timen内容是什么？",
-      "iotdb-datanode-0 pod的env中的dn_rpc_port端口是什么？",
-      "ems-common-front cm的外部网关是什么？",
-      "请帮我输出ems-uat ns下所有pod的资源分配情况，输出在表格中: pod name、memory request、memory limit、cpu rquest、cpu limit"
+      "account pod的镜像版本是什么?",
+      "middle-device pod的镜像版本?",
+      "ems-uat ns下所有pod的镜像版本,输出在表格中: pod name、镜像版本",
+      "device-gateway pod中当前目录的novastar_timen内容是什么?",
+      "ems-common-front cm的外部网关是什么?",
+      "ems-uat ns下所有pod的资源分配情况,输出在表格中: pod name、memory request、memory limit、cpu rquest、cpu limit"
     ]
   },
   {
@@ -83,6 +86,26 @@ const questionCategories = [
       "account pod的日志,只展示最后10条",
       "集群的最近20条event",
       "查询pod内的日志,需要提供pod name、日志路径"
+    ]
+  },
+  {
+    title: "查询监控告警(Prometheus) - 开发中",
+    examples: [
+      "iotdb-datanode-0 pod 最近七天的内存趋势?",
+      "查询集群node的磁盘使用情况?"
+    ]
+  },
+  {
+    title: "查询日志(Loki/efk)- 开发中",
+    examples: [
+      "查询pod 告警时间点的日志",
+      "查询iotdb-datanode-0 pod 的最新的error日志"
+    ]
+  },
+  {
+    title: "告警故障自愈- 开发中",
+    examples: [
+      "pod/node 磁盘空间满了,帮我分析原因,并给出解决方案，等待执行"
     ]
   }
 ];
@@ -108,6 +131,7 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
   const [isComposing, setIsComposing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(true);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
 
   // 组件挂载时设置为浅色模式
@@ -889,27 +913,52 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
                 </button>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="space-y-2">
                 {questionCategories.map((category) => (
                   <div 
                     key={category.title} 
-                    className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:border-blue-500/50 transition-all shadow-sm hover:shadow-md"
+                    className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-500/50 transition-all shadow-sm hover:shadow-md overflow-hidden"
                   >
-                    <h4 className="text-blue-600 dark:text-blue-400 font-medium mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">{category.title}</h4>
-                    <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-2 pl-2">
-                      {category.examples.map((example, index) => (
-                        <li key={index} className="flex items-start">
-                          <div className="min-w-4 text-blue-500 mr-2">•</div>
-                          <span className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white cursor-pointer transition-colors"
+                    <button
+                      onClick={() => setExpandedCategory(expandedCategory === category.title ? null : category.title)}
+                      className="w-full flex items-center justify-between p-4 text-left"
+                    >
+                      <h4 className="text-blue-600 dark:text-blue-400 font-medium">{category.title}</h4>
+                      <ChevronDown 
+                        className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${
+                          expandedCategory === category.title ? 'transform rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+                    
+                    {expandedCategory === category.title && (
+                      <div className="px-4 pb-4">
+                        <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-2 pl-2">
+                          {category.examples.map((example, index) => (
+                            <li key={index} className="flex items-start">
+                              <div className="min-w-4 text-blue-500 mr-2">•</div>
+                              <span 
+                                className={`text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white cursor-pointer transition-colors ${
+                                  category.title.includes('开发中') ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
                                 onClick={() => {
-                                  setInput(example);
-                                  inputRef.current?.focus();
-                                }}>
-                            {example}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                                  if (!category.title.includes('开发中')) {
+                                    setInput(example);
+                                    inputRef.current?.focus();
+                                    setExpandedCategory(null); // 选择后关闭手风琴
+                                  }
+                                }}
+                              >
+                                {example}
+                                {category.title.includes('开发中') && (
+                                  <span className="ml-2 text-xs text-gray-500">(开发中)</span>
+                                )}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
