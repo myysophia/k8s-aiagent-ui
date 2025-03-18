@@ -53,7 +53,7 @@ interface Question {
 
 interface ChatProps {
   model: string;
-  cluster?: string;
+  cluster: string;
 }
 
 // 添加问题类别和示例
@@ -62,7 +62,7 @@ const questionCategories = [
     title: "查询集群信息",
     examples: [
       "当前集群的api-server地址是什么?",
-      "查询集群列表,输出格式集群名称、api-server地址",
+      "当前kubeconfig都有什么权限?",
       "请将集群当前节点node name、cpu、内存、可用区、ip输出在表格中",
       "帮我切换到ems-uat-2集群",
       "查询集群的版本信息",
@@ -110,7 +110,7 @@ const questionCategories = [
   }
 ];
 
-const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster = 'mini' }) => {
+const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -133,6 +133,7 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster = 'mini' }) =>
   const [showHelp, setShowHelp] = useState(true);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
+  const [pendingRequests, setPendingRequests] = useState<{[sessionId: string]: boolean}>({});
 
   // 组件挂载时设置为浅色模式
   useEffect(() => {
@@ -253,20 +254,16 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster = 'mini' }) =>
   // 创建新会话
   const createNewSession = () => {
     // 先保存当前会话的状态
-    if (sessionsState.currentSessionId && messages.length > 0) {
+    if (sessionsState.currentSessionId) {
       const updatedSessions = sessionsState.sessions.map(session => 
         session.id === sessionsState.currentSessionId
           ? { ...session, messages: [...messages], updatedAt: Date.now() }
           : session
       );
-      
-      const newSessionsState = {
-        ...sessionsState,
-        sessions: updatedSessions,
-      };
-      
-      setSessionsState(newSessionsState);
-      localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
+      setSessionsState(prev => ({
+        ...prev,
+        sessions: updatedSessions
+      }));
     }
 
     // 创建新会话
@@ -282,7 +279,7 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster = 'mini' }) =>
 
     // 更新会话状态
     const newSessionsState = {
-      sessions: [...sessionsState.sessions, newSession],
+      sessions: [...(sessionsState.sessions || []), newSession],
       currentSessionId: newSession.id,
     };
 
@@ -297,42 +294,26 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster = 'mini' }) =>
 
   // 切换会话
   const switchSession = (sessionId: string) => {
-    // 如果点击的是当前会话，直接返回
-    if (sessionId === sessionsState.currentSessionId) {
-      return;
-    }
-
-    let newSessionsState;
     // 先保存当前会话的状态
-    if (sessionsState.currentSessionId && messages.length > 0) {
+    if (sessionsState.currentSessionId) {
       const updatedSessions = sessionsState.sessions.map(session => 
         session.id === sessionsState.currentSessionId
           ? { ...session, messages: [...messages], updatedAt: Date.now() }
           : session
       );
-      
-      // 批量更新状态
-      newSessionsState = {
-        ...sessionsState,
-        sessions: updatedSessions,
-        currentSessionId: sessionId,
-      };
-      
-      setSessionsState(newSessionsState);
-      localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
-    } else {
-      // 如果没有需要保存的消息，直接切换会话
-      newSessionsState = {
-        ...sessionsState,
-        currentSessionId: sessionId,
-      };
-      setSessionsState(newSessionsState);
+      setSessionsState(prev => ({
+        ...prev,
+        sessions: updatedSessions
+      }));
     }
 
     // 切换到新会话
     const session = sessionsState.sessions.find(s => s.id === sessionId);
     if (session) {
-      // 重置状态
+      setSessionsState(prev => ({ 
+        ...prev, 
+        currentSessionId: sessionId 
+      }));
       setMessages(session.messages || []);
       setIsLoading(false);
       setInput('');
@@ -521,6 +502,8 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster = 'mini' }) =>
     setMessages(newMessages);
     setInput('');
     setIsLoading(true);
+    // 标记该会话正在等待响应
+    setPendingRequests(prev => ({...prev, [currentSessionId!]: true}));
     setShowCommands(false);
 
     // 立即更新会话状态
@@ -547,25 +530,52 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster = 'mini' }) =>
         type: 'command',
       };
       
-      // 确保消息被添加到正确的会话中
-      if (sessionsState.currentSessionId === currentSessionId) {
-        const newMessages = [...messages, userMessage, assistantMessage];
-        setMessages(newMessages);
+      // 不管当前是哪个会话，都更新发送请求的会话
+      // 获取最新的会话状态
+      const latestSessions = JSON.parse(localStorage.getItem('chat_sessions') || '{"sessions":[]}') as ChatSessionsState;
+      const targetSession = latestSessions.sessions.find(s => s.id === currentSessionId);
+      
+      if (targetSession) {
+        // 获取会话最新的消息
+        const sessionMessages = [...targetSession.messages, assistantMessage];
         
-        // 立即更新会话状态
-        const updatedSessions = sessionsState.sessions.map(session => 
+        // 更新会话状态
+        const updatedSessions = latestSessions.sessions.map(session => 
           session.id === currentSessionId
-            ? { ...session, messages: newMessages, updatedAt: Date.now() }
+            ? { ...session, messages: sessionMessages, updatedAt: Date.now() }
             : session
         );
         
-        const newSessionsState = {
-          ...sessionsState,
+        const updatedSessionsState = {
+          ...latestSessions,
           sessions: updatedSessions,
         };
         
-        setSessionsState(newSessionsState);
-        localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
+        // 更新localStorage
+        localStorage.setItem('chat_sessions', JSON.stringify(updatedSessionsState));
+        
+        // 如果当前还在这个会话，更新UI
+        if (sessionsState.currentSessionId === currentSessionId) {
+          setMessages([...messages, userMessage, assistantMessage]);
+        }
+        
+        // 更新状态
+        setSessionsState(prev => ({
+          ...prev,
+          sessions: updatedSessions
+        }));
+      }
+      
+      // 清除该会话的等待状态
+      setPendingRequests(prev => {
+        const newState = {...prev};
+        delete newState[currentSessionId!];
+        return newState;
+      });
+      
+      // 如果当前显示的是发送请求的会话，重置加载状态
+      if (sessionsState.currentSessionId === currentSessionId) {
+        setIsLoading(false);
       }
     } catch (error: any) {
       const responseData = error.response?.data;
@@ -593,34 +603,59 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster = 'mini' }) =>
         type: 'command',
       };
       
-      // 确保错误消息被添加到正确的会话中
-      if (sessionsState.currentSessionId === currentSessionId) {
-        const newMessages = [...messages, userMessage, errorMessage];
-        setMessages(newMessages);
+      // 不管当前是哪个会话，都更新发送请求的会话
+      // 获取最新的会话状态
+      const latestSessions = JSON.parse(localStorage.getItem('chat_sessions') || '{"sessions":[]}') as ChatSessionsState;
+      const targetSession = latestSessions.sessions.find(s => s.id === currentSessionId);
+      
+      if (targetSession) {
+        // 获取会话最新的消息
+        const sessionMessages = [...targetSession.messages, errorMessage];
         
-        // 立即更新会话状态
-        const updatedSessions = sessionsState.sessions.map(session => 
+        // 更新会话状态
+        const updatedSessions = latestSessions.sessions.map(session => 
           session.id === currentSessionId
-            ? { ...session, messages: newMessages, updatedAt: Date.now() }
+            ? { ...session, messages: sessionMessages, updatedAt: Date.now() }
             : session
         );
         
-        const newSessionsState = {
-          ...sessionsState,
+        const updatedSessionsState = {
+          ...latestSessions,
           sessions: updatedSessions,
         };
         
-        setSessionsState(newSessionsState);
-        localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
+        // 更新localStorage
+        localStorage.setItem('chat_sessions', JSON.stringify(updatedSessionsState));
+        
+        // 如果当前还在这个会话，更新UI
+        if (sessionsState.currentSessionId === currentSessionId) {
+          setMessages([...messages, userMessage, errorMessage]);
+        }
+        
+        // 更新状态
+        setSessionsState(prev => ({
+          ...prev,
+          sessions: updatedSessions
+        }));
+      }
+      
+      // 清除该会话的等待状态
+      setPendingRequests(prev => {
+        const newState = {...prev};
+        delete newState[currentSessionId!];
+        return newState;
+      });
+      
+      // 如果当前显示的是发送请求的会话，重置加载状态
+      if (sessionsState.currentSessionId === currentSessionId) {
+        setIsLoading(false);
       }
       
       if (error.message?.includes('API 配置')) {
         setTimeout(() => router.push('/settings'), 2000);
       }
     } finally {
-      if (sessionsState.currentSessionId === currentSessionId) {
-        setIsLoading(false);
-      }
+      // 这里不再设置isLoading，因为已经在try和catch中处理了
     }
   };
 
