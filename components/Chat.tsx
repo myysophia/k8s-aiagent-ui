@@ -121,6 +121,7 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
   const [currentConfig, setCurrentConfig] = useState<ApiConfig | null>(null);
   const [currentModel, setCurrentModel] = useState(initialModel);
   const [sessionsState, setSessionsState] = useState<ChatSessionsState>(DEFAULT_SESSIONS_STATE);
+  const [forceSessionsRefresh, setForceSessionsRefresh] = useState<number>(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
@@ -299,33 +300,73 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
   const switchSession = (sessionId: string) => {
     // 先保存当前会话的状态
     if (sessionsState.currentSessionId) {
-      const updatedSessions = sessionsState.sessions.map(session => 
-        session.id === sessionsState.currentSessionId
-          ? { ...session, messages: [...messages], updatedAt: Date.now() }
-          : session
-      );
-      setSessionsState(prev => ({
-        ...prev,
-        sessions: updatedSessions
-      }));
+      // 从localStorage获取最新会话状态，避免数据丢失
+      try {
+        const savedSessions = JSON.parse(localStorage.getItem('chat_sessions') || '{}') as ChatSessionsState;
+        const currentSessionMessages = messages;
+        
+        // 更新当前会话的消息
+        const updatedSessions = savedSessions.sessions.map(session => 
+          session.id === sessionsState.currentSessionId
+            ? { ...session, messages: currentSessionMessages, updatedAt: Date.now() }
+            : session
+        );
+        
+        const updatedSessionsState = {
+          ...savedSessions,
+          sessions: updatedSessions,
+        };
+        
+        // 保存到localStorage
+        localStorage.setItem('chat_sessions', JSON.stringify(updatedSessionsState));
+        
+        console.log("已保存当前会话状态:", sessionsState.currentSessionId);
+      } catch (error) {
+        console.error("保存当前会话状态失败:", error);
+      }
     }
 
+    console.log("切换到会话:", sessionId);
+    
+    // 从localStorage获取最新状态
+    const savedSessions = JSON.parse(localStorage.getItem('chat_sessions') || '{}') as ChatSessionsState;
+    
     // 切换到新会话
-    const session = sessionsState.sessions.find(s => s.id === sessionId);
+    const session = savedSessions.sessions.find(s => s.id === sessionId);
     if (session) {
-      setSessionsState(prev => ({ 
-        ...prev, 
-        currentSessionId: sessionId 
-      }));
+      // 使用新会话的state更新UI
+      const newSessionsState = {
+        ...savedSessions,
+        currentSessionId: sessionId,
+      };
+      
+      // 更新localStorage
+      localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
+      
+      // 更新状态
+      setSessionsState(newSessionsState);
       setMessages(session.messages || []);
-      setIsLoading(false);
+      
+      // 根据该会话是否有挂起的请求来设置加载状态
+      const isSessionLoading = !!pendingRequests[sessionId];
+      setIsLoading(isSessionLoading);
+      
       setInput('');
       setError(null);
+      
+      console.log("已加载会话:", sessionId, "消息数:", session.messages?.length || 0, "加载状态:", isSessionLoading);
     }
   };
 
   // 删除会话
   const deleteSession = (sessionId: string) => {
+    // 清除该会话的挂起请求状态
+    setPendingRequests(prev => {
+      const newState = {...prev};
+      delete newState[sessionId];
+      return newState;
+    });
+    
     const newSessions = sessionsState.sessions.filter(s => s.id !== sessionId);
     const newSessionsState = {
       sessions: newSessions,
@@ -335,8 +376,11 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
     setSessionsState(newSessionsState);
     if (newSessions.length > 0) {
       setMessages(newSessions[0].messages);
+      // 检查新选中的会话是否有挂起的请求
+      setIsLoading(!!pendingRequests[newSessions[0].id]);
     } else {
       setMessages([]);
+      setIsLoading(false);
     }
     
     localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
@@ -430,19 +474,84 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
 
   // 更新会话名称
   const updateSessionName = (sessionId: string, newName: string) => {
-    const newSessions = sessionsState.sessions.map(session =>
+    console.log("开始更新会话名称:", sessionId, "新名称:", newName);
+    
+    // 从localStorage获取最新会话状态
+    const latestSessions = JSON.parse(localStorage.getItem('chat_sessions') || '{"sessions":[]}') as ChatSessionsState;
+    
+    // 确保会话存在
+    if (!latestSessions.sessions.some(s => s.id === sessionId)) {
+      console.error("会话不存在:", sessionId);
+      return;
+    }
+    
+    // 检查会话名称是否已经是新名称 - 避免重复更新
+    const existingSession = latestSessions.sessions.find(s => s.id === sessionId);
+    if (existingSession && existingSession.name === newName) {
+      console.log("会话名称已经是新名称，无需更新:", newName);
+      return;
+    }
+    
+    // 使用最新会话状态更新名称
+    const newSessions = latestSessions.sessions.map(session =>
       session.id === sessionId
         ? { ...session, name: newName }
         : session
     );
     
     const newSessionsState = {
-      ...sessionsState,
+      ...latestSessions,
       sessions: newSessions,
     };
     
-    setSessionsState(newSessionsState);
+    console.log("更新后的会话状态:", newSessionsState);
+    
+    // 先更新localStorage，确保状态持久化
     localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
+    
+    // 然后更新组件状态
+    setSessionsState(prev => {
+      // 构建一个全新的状态对象，避免引用问题
+      const updatedState = JSON.parse(JSON.stringify(newSessionsState));
+      console.log("更新UI状态:", updatedState);
+      return updatedState;
+    });
+    
+    // 强制刷新会话列表
+    setForceSessionsRefresh(prev => prev + 1);
+    
+    // 确保会话列表UI能强制刷新
+    setTimeout(() => {
+      try {
+        // 重新读取localStorage，确保获取最新状态
+        const storedState = JSON.parse(localStorage.getItem('chat_sessions') || '{}') as ChatSessionsState;
+        
+        // 验证重命名是否成功
+        const session = storedState.sessions.find(s => s.id === sessionId);
+        if (session && session.name !== newName) {
+          console.warn("会话名称未更新，尝试再次更新:", sessionId);
+          
+          // 如果名称没更新，重新应用更改
+          const fixedSessions = storedState.sessions.map(s => 
+            s.id === sessionId ? {...s, name: newName} : s
+          );
+          
+          const fixedState = {
+            ...storedState,
+            sessions: fixedSessions
+          };
+          
+          localStorage.setItem('chat_sessions', JSON.stringify(fixedState));
+          setSessionsState(fixedState);
+          // 再次强制刷新
+          setForceSessionsRefresh(prev => prev + 1);
+        } else {
+          console.log("会话名称已成功更新:", session?.name);
+        }
+      } catch (err) {
+        console.error("会话名称更新检查失败:", err);
+      }
+    }, 200);
   };
 
   // 修改 handleSubmit 函数
@@ -484,16 +593,24 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
       return;
     }
 
+    // 重要：在消息处理前先获取当前会话的最新消息
+    const latestSessions = JSON.parse(localStorage.getItem('chat_sessions') || '{"sessions":[]}') as ChatSessionsState;
+    const currentSession = latestSessions.sessions.find(s => s.id === currentSessionId);
+    let currentMessages = messages;
+    
+    // 如果localStorage中的消息和当前显示的不同，使用localStorage中的消息
+    if (currentSession && JSON.stringify(currentSession.messages) !== JSON.stringify(messages)) {
+      console.log("使用localStorage中的消息，避免数据不一致");
+      currentMessages = currentSession.messages;
+      setMessages(currentMessages); // 同步UI显示
+    }
+    
     const userMessage: ChatMessage = {
       role: 'user',
       content: processedInput,
       timestamp: Date.now(),
       type: 'command',
     };
-
-    // 直接从 localStorage 获取最新的会话状态
-    const latestSessions = JSON.parse(localStorage.getItem('chat_sessions') || '{"sessions":[]}') as ChatSessionsState;
-    const currentSession = latestSessions.sessions.find(s => s.id === currentSessionId);
     
     // 如果是会话的第一条消息或默认名称，重命名会话
     if (currentSession) {
@@ -506,7 +623,7 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
     }
 
     // 更新消息和状态
-    const newMessages = [...messages, userMessage];
+    const newMessages = [...currentMessages, userMessage];
     setMessages(newMessages);
     setInput('');
     setIsLoading(true);
@@ -515,19 +632,21 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
     setShowCommands(false);
 
     // 立即更新会话状态
-    const updatedSessions = sessionsState.sessions.map(session => 
+    const updatedSessions = latestSessions.sessions.map(session => 
       session.id === currentSessionId
         ? { ...session, messages: newMessages, updatedAt: Date.now() }
         : session
     );
     
     const newSessionsState = {
-      ...sessionsState,
+      ...latestSessions,
       sessions: updatedSessions,
+      currentSessionId: currentSessionId,
     };
     
     setSessionsState(newSessionsState);
     localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
+    console.log("已保存用户消息到会话:", currentSessionId);
 
     try {
       const response = await sendMessage(processedInput, currentModel, cluster);
@@ -538,38 +657,51 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
         type: 'command',
       };
       
-      // 获取最新的会话状态
-      const latestSessions = JSON.parse(localStorage.getItem('chat_sessions') || '{"sessions":[]}') as ChatSessionsState;
-      const targetSession = latestSessions.sessions.find(s => s.id === currentSessionId);
+      // 重要：再次获取最新会话状态，以防在请求过程中状态已改变
+      const latestSessionsAfterResponse = JSON.parse(localStorage.getItem('chat_sessions') || '{"sessions":[]}') as ChatSessionsState;
+      const targetSession = latestSessionsAfterResponse.sessions.find(s => s.id === currentSessionId);
       
       if (targetSession) {
-        // 获取会话最新的消息
+        // 获取会话最新的消息 - 确保使用最新状态
         const sessionMessages = [...targetSession.messages, assistantMessage];
         
         // 更新会话状态
-        const updatedSessions = latestSessions.sessions.map(session => 
+        const updatedSessions = latestSessionsAfterResponse.sessions.map(session => 
           session.id === currentSessionId
             ? { ...session, messages: sessionMessages, updatedAt: Date.now() }
             : session
         );
         
         const updatedSessionsState = {
-          ...latestSessions,
+          ...latestSessionsAfterResponse,
           sessions: updatedSessions,
         };
         
         // 更新localStorage
         localStorage.setItem('chat_sessions', JSON.stringify(updatedSessionsState));
+        console.log("已保存AI回复到会话:", currentSessionId);
         
         // 如果当前还在这个会话，更新UI
         if (sessionsState.currentSessionId === currentSessionId) {
-          setMessages([...messages, userMessage, assistantMessage]);
+          console.log("当前显示会话仍是:", currentSessionId, "更新UI");
+          setMessages(sessionMessages);
+        } else {
+          console.log("当前显示会话已切换为:", sessionsState.currentSessionId, "不更新UI");
+        }
+        
+        // 如果会话名称仍是默认名称，重新尝试更新名称
+        if (targetSession.name.match(/^会话\s\d+$/)) {
+          const newName = generateSessionName(processedInput);
+          updateSessionName(currentSessionId, newName);
         }
         
         // 更新状态
         setSessionsState(prev => ({
           ...prev,
-          sessions: updatedSessions
+          sessions: prev.currentSessionId === currentSessionId ? 
+            updatedSessions : // 如果当前会话ID未改变，更新会话列表
+            prev.sessions.map(s => s.id === currentSessionId ? // 如果已改变，仅更新特定会话
+              updatedSessions.find(us => us.id === currentSessionId) || s : s)
         }));
       }
       
@@ -611,37 +743,50 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
       };
       
       // 获取最新的会话状态
-      const latestSessions = JSON.parse(localStorage.getItem('chat_sessions') || '{"sessions":[]}') as ChatSessionsState;
-      const targetSession = latestSessions.sessions.find(s => s.id === currentSessionId);
+      const latestSessionsAfterError = JSON.parse(localStorage.getItem('chat_sessions') || '{"sessions":[]}') as ChatSessionsState;
+      const targetSession = latestSessionsAfterError.sessions.find(s => s.id === currentSessionId);
       
       if (targetSession) {
-        // 获取会话最新的消息
+        // 获取会话最新的消息 - 确保使用最新状态
         const sessionMessages = [...targetSession.messages, errorMessage];
         
         // 更新会话状态
-        const updatedSessions = latestSessions.sessions.map(session => 
+        const updatedSessions = latestSessionsAfterError.sessions.map(session => 
           session.id === currentSessionId
             ? { ...session, messages: sessionMessages, updatedAt: Date.now() }
             : session
         );
         
         const updatedSessionsState = {
-          ...latestSessions,
+          ...latestSessionsAfterError,
           sessions: updatedSessions,
         };
         
         // 更新localStorage
         localStorage.setItem('chat_sessions', JSON.stringify(updatedSessionsState));
+        console.log("已保存错误回复到会话:", currentSessionId);
         
         // 如果当前还在这个会话，更新UI
         if (sessionsState.currentSessionId === currentSessionId) {
-          setMessages([...messages, userMessage, errorMessage]);
+          console.log("当前显示会话仍是:", currentSessionId, "更新UI错误消息");
+          setMessages(sessionMessages);
+        } else {
+          console.log("当前显示会话已切换为:", sessionsState.currentSessionId, "不更新UI错误消息");
+        }
+        
+        // 如果会话名称仍是默认名称，重新尝试更新名称
+        if (targetSession.name.match(/^会话\s\d+$/)) {
+          const newName = generateSessionName(processedInput);
+          updateSessionName(currentSessionId, newName);
         }
         
         // 更新状态
         setSessionsState(prev => ({
           ...prev,
-          sessions: updatedSessions
+          sessions: prev.currentSessionId === currentSessionId ? 
+            updatedSessions : // 如果当前会话ID未改变，更新会话列表
+            prev.sessions.map(s => s.id === currentSessionId ? // 如果已改变，仅更新特定会话
+              updatedSessions.find(us => us.id === currentSessionId) || s : s)
         }));
       }
       
@@ -677,15 +822,44 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
 
   // 获取会话分组
   const getSessionGroups = () => {
+    // 从localStorage获取最新状态，确保显示最新的会话名称
+    try {
+      const savedSessions = localStorage.getItem('chat_sessions');
+      if (savedSessions) {
+        const latestSessions = JSON.parse(savedSessions) as ChatSessionsState;
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const lastWeek = new Date(today);
+        lastWeek.setDate(lastWeek.getDate() - 7);
+        
+        return {
+          today: latestSessions.sessions.filter(s => new Date(s.createdAt) >= today),
+          yesterday: latestSessions.sessions.filter(s => {
+            const date = new Date(s.createdAt);
+            return date >= yesterday && date < today;
+          }),
+          lastWeek: latestSessions.sessions.filter(s => {
+            const date = new Date(s.createdAt);
+            return date >= lastWeek && date < yesterday;
+          }),
+          older: latestSessions.sessions.filter(s => new Date(s.createdAt) < lastWeek),
+        };
+      }
+    } catch (error) {
+      console.error("获取会话分组失败:", error);
+    }
+    
+    // 回退到组件状态
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     const lastWeek = new Date(today);
     lastWeek.setDate(lastWeek.getDate() - 7);
-    const lastMonth = new Date(today);
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
-
+    
     return {
       today: sessionsState.sessions.filter(s => new Date(s.createdAt) >= today),
       yesterday: sessionsState.sessions.filter(s => {
@@ -704,26 +878,41 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
   const renameSession = (sessionId: string) => {
     if (!editSessionName.trim()) return;
     
-    const newSessions = sessionsState.sessions.map(session =>
-      session.id === sessionId
-        ? { ...session, name: editSessionName.trim() }
-        : session
-    );
+    // 从localStorage获取最新状态
+    try {
+      const savedSessions = JSON.parse(localStorage.getItem('chat_sessions') || '{}') as ChatSessionsState;
+      
+      // 使用最新会话状态更新名称
+      const newSessions = savedSessions.sessions.map(session =>
+        session.id === sessionId
+          ? { ...session, name: editSessionName.trim() }
+          : session
+      );
+      
+      const newSessionsState = {
+        ...savedSessions,
+        sessions: newSessions,
+      };
+      
+      // 先更新localStorage
+      localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
+      console.log("手动重命名会话:", sessionId, "新名称:", editSessionName.trim());
+      
+      // 再更新UI状态
+      setSessionsState(newSessionsState);
+      setForceSessionsRefresh(prev => prev + 1); // 强制刷新
+    } catch (error) {
+      console.error("重命名会话失败:", error);
+    }
     
-    const newSessionsState = {
-      ...sessionsState,
-      sessions: newSessions,
-    };
-    
-    setSessionsState(newSessionsState);
-    localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
+    // 退出编辑模式
     setIsEditingSession(null);
   };
 
   // 渲染会话列表项
   const renderSessionItem = (session: ChatSession) => (
     <div
-      key={session.id}
+      key={`${session.id}-${forceSessionsRefresh}`}
       className={`group flex items-center space-x-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
         session.id === sessionsState.currentSessionId
           ? 'bg-blue-500 text-white'
@@ -765,7 +954,19 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
             onClick={() => switchSession(session.id)}
             className="flex-1 text-sm text-left truncate"
           >
-            {session.name}
+            <div className="flex items-center">
+              <span className="truncate">{session.name}</span>
+              {pendingRequests[session.id] && (
+                <span className={`ml-2 flex items-center text-xs ${
+                  session.id === sessionsState.currentSessionId
+                    ? 'text-white/80' 
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}>
+                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  <span className="animate-pulse">处理中</span>
+                </span>
+              )}
+            </div>
           </button>
           <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
@@ -1128,12 +1329,14 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
             ))}
             <div ref={messagesEndRef} />
             
-            {isLoading && (
-              <div className="flex items-center justify-center space-x-2 text-gray-500 dark:text-gray-400 py-4">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="animate-pulse">正在处理...</span>
-              </div>
-            )}
+            <div className="h-12 flex items-center justify-center">
+              {isLoading && sessionsState.currentSessionId && (
+                <div className="flex items-center justify-center space-x-2 text-gray-500 dark:text-gray-400">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="animate-pulse">正在处理...</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
