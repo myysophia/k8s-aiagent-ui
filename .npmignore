@@ -1,0 +1,7 @@
+.git
+.github
+node_modules
+.next
+.vscode
+.idea
+*.log

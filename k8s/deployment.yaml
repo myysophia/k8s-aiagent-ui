@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-aiagent-ui
+  namespace: k8s-aiagent
+  labels:
+    app: k8s-aiagent-ui
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: k8s-aiagent-ui
+  template:
+    metadata:
+      labels:
+        app: k8s-aiagent-ui
+    spec:
+      containers:
+      - name: k8s-aiagent-ui
+        image: ghcr.io/your-username/k8s-aiagent-ui:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: NEXT_PUBLIC_API_BASE_URL
+          value: "/api"
+        - name: PORT
+          value: "3000"
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "512Mi"
+          requests:
+            cpu: "0.2"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5 

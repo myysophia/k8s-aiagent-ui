@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: k8s-aiagent-ui
+  namespace: k8s-aiagent
+  labels:
+    app: k8s-aiagent-ui
+spec:
+  selector:
+    app: k8s-aiagent-ui
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  type: ClusterIP 

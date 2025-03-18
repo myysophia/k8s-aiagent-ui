@@ -179,3 +179,70 @@ MIT License
 ### 联系方式
 <img width="247" alt="image" src="https://github.com/user-attachments/assets/a33ae4fe-53b6-4c3d-99df-e79e06c07197" />
 
+## CI/CD 和部署
+
+### GitHub Actions 自动构建
+
+本项目使用 GitHub Actions 自动构建 Docker 镜像并发布到 GitHub Container Registry (GHCR)。
+
+工作流程将在以下情况下触发：
+- 推送到 `main` 或 `develop` 分支
+- 创建新的版本标签 (v*)
+- 手动触发工作流程
+
+#### 自动化流程
+
+1. **构建阶段**：
+   - 检出代码
+   - 设置 Node.js 环境
+   - 安装依赖
+   - 运行代码检查
+   - 构建 Docker 镜像
+   - 推送镜像到 GHCR
+
+2. **部署阶段**：
+   - 根据分支或标签自动部署到相应环境
+   - `main` 分支和版本标签 -> 生产环境
+   - `develop` 分支 -> 测试环境
+
+### 手动部署
+
+如果需要手动构建和部署 Docker 镜像，可以按照以下步骤操作：
+
+```bash
+# 构建 Docker 镜像
+docker build -t k8s-aiagent-ui:latest .
+
+# 运行 Docker 容器
+docker run -p 3000:3000 -e NEXT_PUBLIC_API_BASE_URL=/api k8s-aiagent-ui:latest
+```
+
+### Kubernetes 部署
+
+项目包含了 Kubernetes 部署配置文件，位于 `k8s` 目录下：
+
+```bash
+# 创建命名空间
+kubectl apply -f k8s/namespace.yaml
+
+# 部署应用
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/ingress.yaml
+
+# 检查部署状态
+kubectl get pods -n k8s-aiagent
+kubectl get svc -n k8s-aiagent
+kubectl get ingress -n k8s-aiagent
+```
+
+访问应用：
+- URL: http://k8s-aiagent-ui.lab
+
+### 环境变量配置
+
+Docker 和 Kubernetes 部署中支持以下环境变量：
+
+- `NEXT_PUBLIC_API_BASE_URL`: API 基础 URL，默认为 `/api`
+- `PORT`: 应用监听端口，默认为 `3000`
+
