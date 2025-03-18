@@ -10,7 +10,7 @@ on:
 env:
   REGISTRY: docker.io # 修改为 Docker Hub 的注册表地址
   DOCKERHUB_USERNAME: ninesun0318 # 你的 Docker Hub 用户名
-  IMAGE_NAME: ${{ env.DOCKERHUB_USERNAME }}/k8s-aiagent-ui # 镜像名，格式为 用户名/镜像名
+  IMAGE_NAME: ninesun0318/k8s-aiagent-ui # 镜像名，格式为 用户名/镜像名
 
 jobs:
   build:
