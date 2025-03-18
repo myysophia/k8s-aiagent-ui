@@ -1,5 +1,62 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Pencil, Trash, X, Plus } from 'lucide-react';
+import { ApiConfig } from '../types/api-config';
+
 const Settings: React.FC = () => {
-  // ... existing code ...
+  const [configs, setConfigs] = useState<ApiConfig[]>([]);
+  const [currentConfigId, setCurrentConfigId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingConfigId, setEditingConfigId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // 从 localStorage 加载配置
+    const savedConfigs = localStorage.getItem('api_configs');
+    if (savedConfigs) {
+      const parsedConfigs = JSON.parse(savedConfigs);
+      setConfigs(parsedConfigs);
+    }
+
+    // 获取当前选中的配置
+    const savedCurrentConfigId = localStorage.getItem('current_config_id');
+    if (savedCurrentConfigId) {
+      setCurrentConfigId(savedCurrentConfigId);
+    }
+  }, []);
+
+  const handleAddConfig = () => {
+    setEditingConfigId(null);
+    setShowForm(true);
+  };
+
+  const handleEditConfig = (configId: string) => {
+    setEditingConfigId(configId);
+    setShowForm(true);
+  };
+
+  const handleDeleteConfig = (configId: string) => {
+    const updatedConfigs = configs.filter(config => config.id !== configId);
+    setConfigs(updatedConfigs);
+    localStorage.setItem('api_configs', JSON.stringify(updatedConfigs));
+    
+    // 如果删除的是当前选中的配置，重置当前配置
+    if (configId === currentConfigId) {
+      setCurrentConfigId(updatedConfigs.length > 0 ? updatedConfigs[0].id : null);
+      localStorage.setItem('current_config_id', updatedConfigs.length > 0 ? updatedConfigs[0].id : '');
+    }
+  };
+
+  const handleSelectConfig = (configId: string) => {
+    setCurrentConfigId(configId);
+    localStorage.setItem('current_config_id', configId);
+  };
+
+  const handleSubmitForm = (e: React.FormEvent) => {
+    e.preventDefault();
+    // 表单提交逻辑（未实现）
+    setShowForm(false);
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100">
@@ -76,14 +133,14 @@ const Settings: React.FC = () => {
                     <div>
                       <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API 地址</h3>
                       <p className="text-gray-800 dark:text-gray-200 break-all bg-gray-100 dark:bg-gray-700 p-2 rounded">
-                        {config.apiUrl}
+                        {config.baseUrl}
                       </p>
                     </div>
                     
                     <div>
                       <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">可用模型</h3>
                       <div className="flex flex-wrap gap-2">
-                        {config.selectedModels.map((model) => (
+                        {config.selectedModels && config.selectedModels.map((model) => (
                           <span 
                             key={model} 
                             className="px-2 py-1 text-xs rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"

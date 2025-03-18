@@ -1,11 +1,6 @@
 import axios from 'axios';
 import { ApiConfig } from '../types/api-config';
 
-interface ApiResponse {
-  message: string;
-  status: string;
-}
-
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -15,6 +10,18 @@ export interface ChatMessage {
     action: string;
     args: string;
   };
+}
+
+export interface ApiResponse {
+  message: string;
+  data?: unknown;
+  error?: string;
+}
+
+// 自定义错误类型
+interface EnhancedError extends Error {
+  friendlyMessage: string;
+  response?: unknown;
 }
 
 // 获取当前活跃的 API 配置
@@ -104,28 +111,8 @@ export const login = async (username: string, password: string) => {
   return response.data;
 };
 
-// 解析命令
-const parseCommand = (input: string): { action: string; args: string } | null => {
-  if (!input.startsWith('/')) return null;
-  
-  const parts = input.slice(1).split(' ');
-  const action = parts[0].toLowerCase();
-  const args = parts.slice(1).join(' ');
-  
-  return { action, args };
-};
-
-// 验证命令
-const validateCommand = (action: string): boolean => {
-  const validCommands = ['diagnose', 'analyze', 'execute', 'help'];
-  return validCommands.includes(action);
-};
-
-// 定义 API 基础 URL，可以从环境变量中获取
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
-
 // 发送消息
-export async function sendMessage(message: string, model: string, cluster: string): Promise<any> {
+export async function sendMessage(message: string, model: string, cluster: string): Promise<ApiResponse> {
   try {
     // 解析命令
     let instructions = '';
@@ -150,7 +137,7 @@ export async function sendMessage(message: string, model: string, cluster: strin
     }
     
     const configs = JSON.parse(savedConfigs);
-    const currentConfig = configs.find(c => c.id === currentConfigId);
+    const currentConfig = configs.find((c: ApiConfig) => c.id === currentConfigId);
     
     if (!currentConfig) {
       throw new Error('当前选择的 API 配置未找到');
@@ -170,7 +157,7 @@ export async function sendMessage(message: string, model: string, cluster: strin
     console.log('Sending request body:', requestBody);
     
     // 使用 api 实例发送请求
-    const response = await api.post('/api/execute', requestBody);
+    const response = await api.post<ApiResponse>('/api/execute', requestBody);
     
     return response.data;
   } catch (error) {
@@ -184,14 +171,17 @@ export async function sendMessage(message: string, model: string, cluster: strin
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
         // 使用拦截器中已经处理的友好消息
-        if ((error as any).friendlyMessage) {
+        if ('friendlyMessage' in error) {
           throw error;
         }
         
         const friendlyMessage = '认证失败：API 密钥或令牌无效，请检查设置或重新登录';
-        const enhancedError = new Error(friendlyMessage);
-        (enhancedError as any).friendlyMessage = friendlyMessage;
-        (enhancedError as any).response = error.response;
+        
+        // 创建增强的错误对象
+        const enhancedError = new Error(friendlyMessage) as EnhancedError;
+        enhancedError.friendlyMessage = friendlyMessage;
+        enhancedError.response = error.response;
+        
         throw enhancedError;
       }
     }

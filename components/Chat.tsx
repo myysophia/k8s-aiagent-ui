@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, KeyboardEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Send, Bot, User, Loader2, Terminal, MessageSquare, Settings, Copy, Check, Trash, Download, Plus, Pencil, X, ChevronDown } from 'lucide-react';
-import { ChatMessage, sendMessage } from '../lib/api';
+import { ChatMessage, sendMessage, ApiResponse } from '../lib/api';
 import CommandSuggestions from './CommandSuggestions';
 import { useRouter } from 'next/navigation';
 import { ApiConfig, ChatSession, ChatSessionsState, DEFAULT_SESSIONS_STATE } from '../types/api-config';
@@ -139,7 +139,7 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
   // 组件挂载时设置为浅色模式
   useEffect(() => {
     setTheme('light');
-  }, []);
+  }, [setTheme]);
 
   useEffect(() => {
     // 从 localStorage 加载历史消息

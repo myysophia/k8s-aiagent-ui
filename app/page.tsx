@@ -8,7 +8,7 @@ import { ApiConfig } from '../types/api-config';
 
 export default function Home() {
   const router = useRouter();
-  const [configs, setConfigs] = useState<ApiConfig[]>([]);
+  const [, setConfigs] = useState<ApiConfig[]>([]);
   const [selectedConfig, setSelectedConfig] = useState<ApiConfig | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>('');
 
@@ -69,7 +69,7 @@ export default function Home() {
         <div className="h-full">
           <div className="h-full bg-gray-800 bg-opacity-90">
             {selectedConfig ? (
-              <Chat model={selectedModel} />
+              <Chat model={selectedModel} cluster="default" />
             ) : (
               <div className="text-center text-gray-400 py-8">
                 请先在设置页面配置 API
