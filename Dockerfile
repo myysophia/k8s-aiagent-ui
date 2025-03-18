@@ -4,6 +4,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
+RUN npx tsc next.config.ts --esModuleInterop --noEmit false
 RUN npm run build
 
 # 生产阶段
