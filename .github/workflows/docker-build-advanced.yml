@@ -1,191 +1,191 @@
-# name: Build and Deploy K8s AI Agent UI
+name: Build and Deploy K8s AI Agent UI
 
-# on:
-#   push:
-#     branches: [ "main", "develop" ]
-#     tags: [ 'v*' ]
-#   pull_request:
-#     branches: [ "main", "develop" ]
-#   workflow_dispatch:
-#     inputs:
-#       environment:
-#         description: 'Environment to deploy to'
-#         required: true
-#         default: 'staging'
-#         type: choice
-#         options:
-#           - staging
-#           - production
+on:
+  push:
+    # branches: [ "main", "develop" ]
+    tags: [ 'v*' ]
+  # pull_request:
+  #   branches: [ "main", "develop" ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
 
-# env:
-#   REGISTRY: ghcr.io
-#   IMAGE_NAME: ${{ github.repository_owner }}/k8s-aiagent-ui
-#   CACHE_KEY_PREFIX: k8s-aiagent-ui
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/k8s-aiagent-ui
+  CACHE_KEY_PREFIX: k8s-aiagent-ui
 
-# jobs:
-#   build:
-#     runs-on: ubuntu-latest
-#     permissions:
-#       contents: read
-#       packages: write
-#       security-events: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
 
-#     strategy:
-#       matrix:
-#         node-version: [18.x]
+    strategy:
+      matrix:
+        node-version: [18.x]
 
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v3
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-#       - name: Set up Node.js ${{ matrix.node-version }}
-#         uses: actions/setup-node@v3
-#         with:
-#           node-version: ${{ matrix.node-version }}
-#           cache: 'npm'
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
 
-#       - name: Install dependencies
-#         run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-#       - name: Lint code
-#         run: npm run lint || true
+      - name: Lint code
+        run: npm run lint || true
 
-#       - name: Setup Docker buildx
-#         uses: docker/setup-buildx-action@v2
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v2
 
-#       - name: Cache Docker layers
-#         uses: actions/cache@v3
-#         with:
-#           path: /tmp/.buildx-cache
-#           key: ${{ env.CACHE_KEY_PREFIX }}-buildx-${{ github.sha }}
-#           restore-keys: |
-#             ${{ env.CACHE_KEY_PREFIX }}-buildx-
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ env.CACHE_KEY_PREFIX }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ env.CACHE_KEY_PREFIX }}-buildx-
 
-#       - name: Log in to the Container registry
-#         uses: docker/login-action@v2
-#         with:
-#           registry: ${{ env.REGISTRY }}
-#           username: ${{ github.actor }}
-#           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-#       # 确定 Docker 标签
-#       - name: Extract branch name
-#         shell: bash
-#         run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')" >> $GITHUB_ENV
-#         if: github.ref_type == 'branch'
+      # 确定 Docker 标签
+      - name: Extract branch name
+        shell: bash
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')" >> $GITHUB_ENV
+        if: github.ref_type == 'branch'
 
-#       - name: Extract version from tag
-#         shell: bash
-#         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
-#         if: github.ref_type == 'tag'
+      - name: Extract version from tag
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+        if: github.ref_type == 'tag'
 
-#       # 设置镜像标签
-#       - name: Set Image tags
-#         id: set_tags
-#         run: |
-#           if [ "${{ github.ref_type }}" = "tag" ]; then
-#             echo "TAGS=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
-#           else
-#             echo "TAGS=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.BRANCH_NAME }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.BRANCH_NAME }}-${{ github.sha }}" >> $GITHUB_OUTPUT
-#           fi
+      # 设置镜像标签
+      - name: Set Image tags
+        id: set_tags
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "TAGS=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
+          else
+            echo "TAGS=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.BRANCH_NAME }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.BRANCH_NAME }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
 
-#       # 扫描安全漏洞
-#       - name: Run Trivy vulnerability scanner
-#         uses: aquasecurity/trivy-action@master
-#         with:
-#           image-ref: 'Dockerfile'
-#           format: 'sarif'
-#           output: 'trivy-results.sarif'
-#           severity: 'CRITICAL,HIGH'
-#           scan-type: 'fs'
+      # 扫描安全漏洞
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'Dockerfile'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          scan-type: 'fs'
 
-#       - name: Upload Trivy scan results to GitHub Security tab
-#         uses: github/codeql-action/upload-sarif@v2
-#         with:
-#           sarif_file: 'trivy-results.sarif'
-#           category: 'trivy'
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'trivy'
 
-#       # 构建和推送 Docker 镜像
-#       - name: Build and push Docker image
-#         uses: docker/build-push-action@v4
-#         with:
-#           context: .
-#           push: ${{ github.event_name != 'pull_request' }}
-#           tags: ${{ steps.set_tags.outputs.TAGS }}
-#           cache-from: type=local,src=/tmp/.buildx-cache
-#           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-#           build-args: |
-#             NODE_ENV=production
-#             NEXT_PUBLIC_VERSION=${{ github.ref_type == 'tag' && env.VERSION || env.BRANCH_NAME }}
+      # 构建和推送 Docker 镜像
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.set_tags.outputs.TAGS }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          build-args: |
+            NODE_ENV=production
+            NEXT_PUBLIC_VERSION=${{ github.ref_type == 'tag' && env.VERSION || env.BRANCH_NAME }}
 
-#       # 临时修复缓存
-#       - name: Move cache
-#         run: |
-#           rm -rf /tmp/.buildx-cache
-#           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+      # 临时修复缓存
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
-#   deploy:
-#     needs: build
-#     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/v'))
-#     runs-on: ubuntu-latest
-#     environment:
-#       name: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') ? 'production' : 'staging') }}
-#     concurrency:
-#       group: ${{ github.workflow }}-${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') ? 'production' : 'staging') }}
-#       cancel-in-progress: true
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') ? 'production' : 'staging') }}
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') ? 'production' : 'staging') }}
+      cancel-in-progress: true
 
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v3
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-#       - name: Set up kubectl
-#         uses: azure/setup-kubectl@v3
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
         
-#       - name: Configure Kubernetes credentials
-#         uses: azure/k8s-set-context@v3
-#         with:
-#           method: kubeconfig
-#           kubeconfig: ${{ secrets.KUBECONFIG }}
+      - name: Configure Kubernetes credentials
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG }}
           
-#       - name: Extract branch name
-#         shell: bash
-#         run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')" >> $GITHUB_ENV
-#         if: github.ref_type == 'branch'
+      - name: Extract branch name
+        shell: bash
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')" >> $GITHUB_ENV
+        if: github.ref_type == 'branch'
 
-#       - name: Extract version from tag
-#         shell: bash
-#         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
-#         if: github.ref_type == 'tag'
+      - name: Extract version from tag
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+        if: github.ref_type == 'tag'
         
-#       - name: Set image tag for deployment
-#         run: |
-#           if [ "${{ github.ref_type }}" = "tag" ]; then
-#             echo "IMAGE_TAG=${{ env.VERSION }}" >> $GITHUB_ENV
-#           else
-#             echo "IMAGE_TAG=${{ env.BRANCH_NAME }}" >> $GITHUB_ENV
-#           fi
+      - name: Set image tag for deployment
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "IMAGE_TAG=${{ env.VERSION }}" >> $GITHUB_ENV
+          else
+            echo "IMAGE_TAG=${{ env.BRANCH_NAME }}" >> $GITHUB_ENV
+          fi
           
-#       - name: Update Kubernetes manifests
-#         run: |
-#           # 更新 deployment.yaml 中的镜像标签
-#           sed -i "s|image:.*k8s-aiagent-ui:.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}|g" k8s/deployment.yaml
+      - name: Update Kubernetes manifests
+        run: |
+          # 更新 deployment.yaml 中的镜像标签
+          sed -i "s|image:.*k8s-aiagent-ui:.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}|g" k8s/deployment.yaml
           
-#       - name: Deploy to Kubernetes
-#         run: |
-#           kubectl apply -f k8s/namespace.yaml || true
-#           kubectl apply -f k8s/deployment.yaml
-#           kubectl apply -f k8s/service.yaml
-#           kubectl apply -f k8s/ingress.yaml
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/namespace.yaml || true
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/ingress.yaml
           
-#       - name: Verify deployment
-#         run: |
-#           kubectl rollout status deployment/k8s-aiagent-ui -n k8s-aiagent --timeout=180s
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/k8s-aiagent-ui -n k8s-aiagent --timeout=180s
           
-#       - name: Post Deployment Notification
-#         if: success()
-#         uses: rtCamp/action-slack-notify@v2
-#         env:
-#           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-#           SLACK_COLOR: ${{ job.status }}
-#           SLACK_TITLE: 'K8s AI Agent UI Deployment'
-#           SLACK_MESSAGE: ':rocket: Successfully deployed K8s AI Agent UI to ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') ? 'production' : 'staging') }} environment!' 
+      - name: Post Deployment Notification
+        if: success()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_TITLE: 'K8s AI Agent UI Deployment'
+          SLACK_MESSAGE: ':rocket: Successfully deployed K8s AI Agent UI to ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') ? 'production' : 'staging') }} environment!' 
