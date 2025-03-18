@@ -85,7 +85,7 @@ const questionCategories = [
     examples: [
       "account pod的日志,只展示最后10条",
       "集群的最近20条event",
-      "查询pod内的日志,需要提供pod name、日志路径"
+      "ems-uat ns中的iotdb-datanode-0 pod中的/iotdb/logs/log_datanode_all.log 中包含energy的日志,只输出最后一条"
     ]
   },
   {
