@@ -34,7 +34,7 @@ export default function Settings() {
       const defaultConfig: ApiConfig = {
         ...DEFAULT_CONFIG,
         id: generateUUID(),
-        name: 'OpenAI API',
+        name: 'Qwen',
         apiKey: '',
         selectedModels: [],
         createdAt: Date.now(),

@@ -290,6 +290,9 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
     setMessages([]);
     setSessionsState(newSessionsState);
     localStorage.setItem('chat_sessions', JSON.stringify(newSessionsState));
+    
+    // 返回新创建的会话ID
+    return newSession.id;
   };
 
   // 切换会话
@@ -456,8 +459,9 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
     }
 
     // 如果没有活动会话，创建一个新会话
-    if (!sessionsState.currentSessionId) {
-      createNewSession();
+    let currentSessionId = sessionsState.currentSessionId;
+    if (!currentSessionId) {
+      currentSessionId = createNewSession();
     }
 
     // 处理输入内容
@@ -487,14 +491,18 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
       type: 'command',
     };
 
-    // 保存当前会话 ID，以防在请求过程中切换会话
-    const currentSessionId = sessionsState.currentSessionId;
-
-    // 如果是会话的第一条消息，自动更新会话名称
-    const currentSession = sessionsState.sessions.find(s => s.id === currentSessionId);
-    if (currentSession && currentSession.messages.length === 0) {
-      const newName = generateSessionName(processedInput);
-      updateSessionName(currentSession.id, newName);
+    // 直接从 localStorage 获取最新的会话状态
+    const latestSessions = JSON.parse(localStorage.getItem('chat_sessions') || '{"sessions":[]}') as ChatSessionsState;
+    const currentSession = latestSessions.sessions.find(s => s.id === currentSessionId);
+    
+    // 如果是会话的第一条消息或默认名称，重命名会话
+    if (currentSession) {
+      // 检查会话是否使用默认名称（以"会话"开头）
+      if (currentSession.name.match(/^会话\s\d+$/) || currentSession.messages.length === 0) {
+        const newName = generateSessionName(processedInput);
+        console.log("重命名会话:", currentSessionId, "新名称:", newName); // 调试日志
+        updateSessionName(currentSessionId, newName);
+      }
     }
 
     // 更新消息和状态
@@ -530,7 +538,6 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
         type: 'command',
       };
       
-      // 不管当前是哪个会话，都更新发送请求的会话
       // 获取最新的会话状态
       const latestSessions = JSON.parse(localStorage.getItem('chat_sessions') || '{"sessions":[]}') as ChatSessionsState;
       const targetSession = latestSessions.sessions.find(s => s.id === currentSessionId);
@@ -603,7 +610,6 @@ const Chat: React.FC<ChatProps> = ({ model: initialModel, cluster }) => {
         type: 'command',
       };
       
-      // 不管当前是哪个会话，都更新发送请求的会话
       // 获取最新的会话状态
       const latestSessions = JSON.parse(localStorage.getItem('chat_sessions') || '{"sessions":[]}') as ChatSessionsState;
       const targetSession = latestSessions.sessions.find(s => s.id === currentSessionId);

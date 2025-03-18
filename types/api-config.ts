@@ -10,19 +10,19 @@ export interface ProviderConfig {
 }
 
 export const PROVIDERS: Record<string, ProviderConfig> = {
+  Qwen: {
+      name: '阿里通义千问',
+      baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      models: ['qwen-max-latest'],
+      keyPattern: /^sk-ant-[A-Za-z0-9]{32,}$/,
+      description: '注意: 支持 qwen系列funtion call能力模型',
+  },
   OpenAI: {
     name: 'OpenAI',
     baseUrl: 'https://api.openai.com/v1',
-    models: ['gpt-4o', 'gpt-3.5-turbo'],
+    models: ['gpt-4o'],
     keyPattern: /^sk-[A-Za-z0-9]{32,}$/,
-    description: '支持 GPT-4o 和 GPT-3.5 系列模型',
-  },
-  Qwen: {
-    name: '阿里通义千问',
-    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    models: ['qwen-plus', 'qwen-max'],
-    keyPattern: /^sk-ant-[A-Za-z0-9]{32,}$/,
-    description: '支持 qwen系列funtion call能力模型',
+    description: '支持 GPT-4o',
   },
   Custom: {
     name: '本地ollama 模型 13b',
@@ -53,9 +53,9 @@ export interface ApiConfigFormData {
 }
 
 export const DEFAULT_CONFIG: Partial<ApiConfig> = {
-  provider: 'OpenAI',
-  baseUrl: PROVIDERS.OpenAI.baseUrl,
-  selectedModels: [],
+  provider: 'Qwen',
+  baseUrl: PROVIDERS.Qwen.baseUrl,
+  selectedModels: ['qwen-max-latest'],
   isActive: true,
 };
 

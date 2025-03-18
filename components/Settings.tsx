@@ -163,7 +163,7 @@ const Settings: React.FC = () => {
                 </label>
                 <div className="flex flex-wrap gap-2 mb-2">
                   <div className="flex items-center bg-blue-900/40 text-blue-300 px-3 py-1 rounded-full">
-                    <span>qwen-max</span>
+                    <span>qwen-max-latest</span>
                     <button className="ml-2 text-blue-300 hover:text-blue-200">
                       <X className="w-4 h-4" />
                     </button>
