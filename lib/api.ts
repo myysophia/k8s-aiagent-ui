@@ -68,14 +68,10 @@ const getApiBaseUrl = (): string => {
     return apiPath;
   }
   
-  // 否则，附加到当前站点的 origin
-  if (typeof window !== 'undefined') {
-    const origin = window.location.origin;
-    return `${origin}${apiPath}`;
-  }
-  
-  // 默认值
-  return '/api';
+  // 使用后端服务URL而不是当前站点的origin
+  const backendUrl = getBackendUrl();
+  console.log('API请求将发送到:', `${backendUrl}${apiPath.startsWith('/') ? apiPath : `/${apiPath}`}`);
+  return `${backendUrl}${apiPath.startsWith('/') ? apiPath : `/${apiPath}`}`;
 };
 
 // 获取后端服务地址（用于登录请求）
