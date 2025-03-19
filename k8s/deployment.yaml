@@ -2,11 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: k8s-aiagent-ui
-  namespace: k8s-aiagent
+  namespace: ops-agent
   labels:
     app: k8s-aiagent-ui
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: k8s-aiagent-ui
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: k8s-aiagent-ui
-        image: ghcr.io/your-username/k8s-aiagent-ui:latest
+        image: ninesun0318/k8s-aiagent-ui:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
@@ -25,6 +25,8 @@ spec:
         env:
         - name: NEXT_PUBLIC_API_BASE_URL
           value: "/api"
+        - name: NEXT_PUBLIC_BACKEND_URL
+          value: "http://ops-agent.ops-agent.svc.cluster.local:80"
         - name: PORT
           value: "3000"
         resources:

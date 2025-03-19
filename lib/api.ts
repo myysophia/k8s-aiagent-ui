@@ -1,6 +1,18 @@
 import axios from 'axios';
 import { ApiConfig } from '../types/api-config';
 
+/**
+ * API 客户端配置
+ * 
+ * 本系统中有两种 API 请求路径:
+ * 1. 登录请求 - 直接发送到后端服务 (例如: http://ops-agent:8080/login)
+ * 2. 其他 API 请求 - 通过 /api 代理 (例如: http://frontend/api/execute)
+ * 
+ * 为处理这种情况，我们创建了两个不同的 axios 实例:
+ * - backendApi: 用于登录请求，直接连接后端服务
+ * - api: 用于其他请求，通过 /api 代理连接后端
+ */
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -46,14 +58,64 @@ const getCurrentConfig = (): ApiConfig | null => {
   return configs[0];
 };
 
+// 获取 API 基础 URL（用于 /api 代理请求）
+const getApiBaseUrl = (): string => {
+  // 获取环境变量中配置的 API 路径（默认为 /api）
+  const apiPath = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+  
+  // 如果是完整 URL，直接返回
+  if (apiPath.startsWith('http://') || apiPath.startsWith('https://')) {
+    return apiPath;
+  }
+  
+  // 否则，附加到当前站点的 origin
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin;
+    return `${origin}${apiPath}`;
+  }
+  
+  // 默认值
+  return '/api';
+};
+
+// 获取后端服务地址（用于登录请求）
+const getBackendUrl = (): string => {
+  // 优先使用环境变量配置的后端地址
+  if (process.env.NEXT_PUBLIC_BACKEND_URL) {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+    
+    // 确保 URL 包含协议（如果没有，则默认添加 http://）
+    if (!backendUrl.startsWith('http://') && !backendUrl.startsWith('https://')) {
+      console.log('后端URL没有指定协议，添加 http:// 前缀:', `http://${backendUrl}`);
+      return `http://${backendUrl}`;
+    }
+    
+    console.log('使用配置的后端URL:', backendUrl);
+    return backendUrl;
+  }
+  
+  // 本地开发环境默认值
+  console.log('使用默认后端URL: http://localhost:8080');
+  return 'http://localhost:8080';
+};
+
 const api = axios.create({
-  // baseURL: 'http://60.204.218.98:8080',
-  baseURL: 'http://localhost:8080',
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
   withCredentials: false // 由于跨域，先设置为 false
+});
+
+// 用于直接访问后端服务的 API 客户端（不通过 /api 代理）
+const backendApi = axios.create({
+  baseURL: getBackendUrl(),
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+  withCredentials: false
 });
 
 // 请求拦截器：添加认证信息和 API 配置
@@ -65,6 +127,22 @@ api.interceptors.request.use((config) => {
     Authorization: token ? 'Bearer ' + token : 'Not Set',
     'X-API-Key': currentConfig?.apiKey ? 'Set' : 'Not Set',
   });
+  
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  
+  if (currentConfig) {
+    config.headers['X-API-Key'] = currentConfig.apiKey;
+  }
+  
+  return config;
+});
+
+// 为 backendApi 也添加相同的拦截器
+backendApi.interceptors.request.use((config) => {
+  const token = localStorage.getItem('jwt');
+  const currentConfig = getCurrentConfig();
   
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -106,9 +184,48 @@ api.interceptors.response.use(
   }
 );
 
+// 为 backendApi 也添加相同的响应拦截器
+backendApi.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401) {
+      console.error('Authentication Error:', {
+        status: error.response.status,
+        message: error.response.data,
+        headers: error.response.headers,
+      });
+      
+      // 清除过期的 token
+      localStorage.removeItem('jwt');
+      
+      // 构造友好的错误消息
+      const errorMessage = '登录已过期，请重新登录';
+      error.friendlyMessage = errorMessage;
+      
+      // 如果不是登录页面，则重定向
+      if (!window.location.pathname.includes('/login')) {
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000); // 延迟 2 秒跳转，让用户看到提示
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const login = async (username: string, password: string) => {
-  const response = await api.post<{ token: string }>('/login', { username, password });
-  return response.data;
+  // 登录请求直接发送到后端服务，不通过 /api 代理
+  // 因为登录接口在后端是 /login 而不是 /api/login
+  console.log('尝试登录，使用 backendApi，baseURL:', backendApi.defaults.baseURL);
+  
+  try {
+    const response = await backendApi.post<{ token: string }>('/login', { username, password });
+    console.log('登录成功，请求发送到:', backendApi.defaults.baseURL + '/login');
+    return response.data;
+  } catch (error) {
+    console.error('登录失败，baseURL:', backendApi.defaults.baseURL, '错误:', error);
+    throw error;
+  }
 };
 
 // 发送消息
@@ -157,7 +274,8 @@ export async function sendMessage(message: string, model: string, cluster: strin
     console.log('Sending request body:', requestBody);
     
     // 使用 api 实例发送请求
-    const response = await api.post<ApiResponse>('/api/execute', requestBody);
+    const response = await api.post<ApiResponse>('/execute', requestBody);
+    console.log('执行命令请求发送到:', api.defaults.baseURL + '/execute');
     
     return response.data;
   } catch (error) {

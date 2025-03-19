@@ -4,6 +4,12 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
+# 确保 next.config.js 存在
+RUN if [ ! -f next.config.js ]; then \
+    echo '/** @type {import("next").NextConfig} */\nconst nextConfig = {};\nmodule.exports = nextConfig;' > next.config.js; \
+    else \
+    echo "next.config.js already exists"; \
+    fi
 RUN npm run build
 
 # 生产阶段
