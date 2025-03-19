@@ -82,10 +82,20 @@ const getApiBaseUrl = (): string => {
 const getBackendUrl = (): string => {
   // 优先使用环境变量配置的后端地址
   if (process.env.NEXT_PUBLIC_BACKEND_URL) {
-    return process.env.NEXT_PUBLIC_BACKEND_URL;
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+    
+    // 确保 URL 包含协议（如果没有，则默认添加 http://）
+    if (!backendUrl.startsWith('http://') && !backendUrl.startsWith('https://')) {
+      console.log('后端URL没有指定协议，添加 http:// 前缀:', `http://${backendUrl}`);
+      return `http://${backendUrl}`;
+    }
+    
+    console.log('使用配置的后端URL:', backendUrl);
+    return backendUrl;
   }
   
   // 本地开发环境默认值
+  console.log('使用默认后端URL: http://localhost:8080');
   return 'http://localhost:8080';
 };
 
@@ -206,9 +216,16 @@ backendApi.interceptors.response.use(
 export const login = async (username: string, password: string) => {
   // 登录请求直接发送到后端服务，不通过 /api 代理
   // 因为登录接口在后端是 /login 而不是 /api/login
-  const response = await backendApi.post<{ token: string }>('/login', { username, password });
-  console.log('登录请求发送到:', backendApi.defaults.baseURL + '/login');
-  return response.data;
+  console.log('尝试登录，使用 backendApi，baseURL:', backendApi.defaults.baseURL);
+  
+  try {
+    const response = await backendApi.post<{ token: string }>('/login', { username, password });
+    console.log('登录成功，请求发送到:', backendApi.defaults.baseURL + '/login');
+    return response.data;
+  } catch (error) {
+    console.error('登录失败，baseURL:', backendApi.defaults.baseURL, '错误:', error);
+    throw error;
+  }
 };
 
 // 发送消息
