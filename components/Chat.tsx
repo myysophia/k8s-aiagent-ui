@@ -105,7 +105,9 @@ const questionCategories = [
   {
     title: "告警故障自愈- 开发中",
     examples: [
-      "pod/node 磁盘空间满了,帮我分析原因,并给出解决方案，等待执行"
+      "pod/node 磁盘空间满了,帮我分析原因,并给出解决方案，等待执行",
+      "多集群联动？例如帮我比较uat和prod的auth 服务的镜像版本?如果不一致,请帮我修改image为最新版本",
+      "帮我检查mysql的test库的test_config表的test字段最新的一笔数据是什么?如果为空,请帮我运行XXX流水线"
     ]
   }
 ];
