@@ -15,6 +15,23 @@ RUN npm run build
 # 生产阶段
 FROM node:18-alpine
 WORKDIR /app
+
+# 安装常见的网络排查工具
+RUN apk add --no-cache \
+    curl \
+    wget \
+    iputils \
+    bind-tools \
+    netcat-openbsd \
+    tcpdump \
+    nmap \
+    iptables \
+    net-tools \
+    nftables \
+    openssh-client \
+    busybox-extras \
+    && echo "网络排查工具安装完成"
+
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public

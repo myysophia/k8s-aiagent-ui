@@ -6,7 +6,7 @@ metadata:
   labels:
     app: k8s-aiagent-ui
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: k8s-aiagent-ui
